@@ -155,12 +155,12 @@ func (sam *SAM) NewKeys(sigType ...string) (i2pkeys.I2PKeys, error) {
 		sigtmp = sigType[0]
 	}
 	if _, err := sam.conn.Write([]byte("DEST GENERATE " + sigtmp + "\n")); err != nil {
-		return i2pkeys.I2PKeys{}, err
+		return i2pkeys.I2PKeys{}, fmt.Errorf("error with writing in SAM: %w", err)
 	}
 	buf := make([]byte, 8192)
 	n, err := sam.conn.Read(buf)
 	if err != nil {
-		return i2pkeys.I2PKeys{}, err
+		return i2pkeys.I2PKeys{}, fmt.Errorf("error with reading in SAM: %w", err)
 	}
 	s := bufio.NewScanner(bytes.NewReader(buf[:n]))
 	s.Split(bufio.ScanWords)
@@ -229,7 +229,7 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 		n, err := conn.Write(scmsg[m:])
 		if err != nil {
 			conn.Close()
-			return nil, err
+			return nil, fmt.Errorf("writing to connection failed: %w", err)
 		}
 		m += n
 	}
@@ -237,7 +237,7 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 	n, err := conn.Read(buf)
 	if err != nil {
 		conn.Close()
-		return nil, err
+		return nil, fmt.Errorf("reading from connection failed: %w", err)
 	}
 	text := string(buf[:n])
 	if strings.HasPrefix(text, session_OK) {
