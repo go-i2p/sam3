@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 	"net"
@@ -60,17 +61,17 @@ func NewSAM(address string) (*SAM, error) {
 	// TODO: clean this up
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error dialing to address '%s': %w", address, err)
 	}
 	if _, err := conn.Write(s.Config.HelloBytes()); err != nil {
 		conn.Close()
-		return nil, err
+		return nil, fmt.Errorf("error writing to address '%s': %w", address, err)
 	}
 	buf := make([]byte, 256)
 	n, err := conn.Read(buf)
 	if err != nil {
 		conn.Close()
-		return nil, err
+		return nil, fmt.Errorf("error reading onto buffer: %w", err)
 	}
 	if strings.Contains(string(buf[:n]), "HELLO REPLY RESULT=OK") {
 		s.Config.I2PConfig.SetSAMAddress(address)
@@ -78,10 +79,9 @@ func NewSAM(address string) (*SAM, error) {
 		//s.Config.I2PConfig.DestinationKeys = nil
 		s.resolver, err = NewSAMResolver(&s)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error creating resolver: %w", err)
 		}
 		return &s, nil
-		//return &SAM{address, conn, nil, nil}, nil
 	} else if string(buf[:n]) == "HELLO REPLY RESULT=NOVERSION\n" {
 		conn.Close()
 		return nil, errors.New("That SAM bridge does not support SAMv3.")
