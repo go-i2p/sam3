@@ -2,6 +2,7 @@ package sam3
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 )
@@ -14,14 +15,18 @@ func SetType(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if s == "STREAM" {
 			c.Style = s
+			log.WithField("style", s).Debug("Set session style")
 			return nil
 		} else if s == "DATAGRAM" {
 			c.Style = s
+			log.WithField("style", s).Debug("Set session style")
 			return nil
 		} else if s == "RAW" {
 			c.Style = s
+			log.WithField("style", s).Debug("Set session style")
 			return nil
 		}
+		log.WithField("style", s).Error("Invalid session style")
 		return fmt.Errorf("Invalid session STYLE=%s, must be STREAM, DATAGRAM, or RAW", s)
 	}
 }
@@ -31,12 +36,17 @@ func SetSAMAddress(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		sp := strings.Split(s, ":")
 		if len(sp) > 2 {
+			log.WithField("address", s).Error("Invalid SAM address")
 			return fmt.Errorf("Invalid address string: %s", sp)
 		}
 		if len(sp) == 2 {
 			c.I2PConfig.SamPort = sp[1]
 		}
 		c.I2PConfig.SamHost = sp[0]
+		log.WithFields(logrus.Fields{
+			"host": c.I2PConfig.SamHost,
+			"port": c.I2PConfig.SamPort,
+		}).Debug("Set SAM address")
 		return nil
 	}
 }
@@ -45,6 +55,7 @@ func SetSAMAddress(s string) func(*SAMEmit) error {
 func SetSAMHost(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		c.I2PConfig.SamHost = s
+		log.WithField("host", s).Debug("Set SAM host")
 		return nil
 	}
 }
@@ -54,12 +65,15 @@ func SetSAMPort(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		port, err := strconv.Atoi(s)
 		if err != nil {
+			log.WithField("port", s).Error("Invalid SAM port: non-number")
 			return fmt.Errorf("Invalid SAM Port %s; non-number", s)
 		}
 		if port < 65536 && port > -1 {
 			c.I2PConfig.SamPort = s
+			log.WithField("port", s).Debug("Set SAM port")
 			return nil
 		}
+		log.WithField("port", port).Error("Invalid SAM port")
 		return fmt.Errorf("Invalid port")
 	}
 }
@@ -68,6 +82,7 @@ func SetSAMPort(s string) func(*SAMEmit) error {
 func SetName(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		c.I2PConfig.TunName = s
+		log.WithField("name", s).Debug("Set tunnel name")
 		return nil
 	}
 }
@@ -77,8 +92,10 @@ func SetInLength(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 7 && u >= 0 {
 			c.I2PConfig.InLength = strconv.Itoa(u)
+			log.WithField("inLength", u).Debug("Set inbound tunnel length")
 			return nil
 		}
+		log.WithField("inLength", u).Error("Invalid inbound tunnel length")
 		return fmt.Errorf("Invalid inbound tunnel length")
 	}
 }
@@ -88,8 +105,10 @@ func SetOutLength(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 7 && u >= 0 {
 			c.I2PConfig.OutLength = strconv.Itoa(u)
+			log.WithField("outLength", u).Debug("Set outbound tunnel length")
 			return nil
 		}
+		log.WithField("outLength", u).Error("Invalid outbound tunnel length")
 		return fmt.Errorf("Invalid outbound tunnel length")
 	}
 }
@@ -99,8 +118,10 @@ func SetInVariance(i int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if i < 7 && i > -7 {
 			c.I2PConfig.InVariance = strconv.Itoa(i)
+			log.WithField("inVariance", i).Debug("Set inbound tunnel variance")
 			return nil
 		}
+		log.WithField("inVariance", i).Error("Invalid inbound tunnel variance")
 		return fmt.Errorf("Invalid inbound tunnel length")
 	}
 }
@@ -110,8 +131,10 @@ func SetOutVariance(i int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if i < 7 && i > -7 {
 			c.I2PConfig.OutVariance = strconv.Itoa(i)
+			log.WithField("outVariance", i).Debug("Set outbound tunnel variance")
 			return nil
 		}
+		log.WithField("outVariance", i).Error("Invalid outbound tunnel variance")
 		return fmt.Errorf("Invalid outbound tunnel variance")
 	}
 }
@@ -121,8 +144,10 @@ func SetInQuantity(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u <= 16 && u > 0 {
 			c.I2PConfig.InQuantity = strconv.Itoa(u)
+			log.WithField("inQuantity", u).Debug("Set inbound tunnel quantity")
 			return nil
 		}
+		log.WithField("inQuantity", u).Error("Invalid inbound tunnel quantity")
 		return fmt.Errorf("Invalid inbound tunnel quantity")
 	}
 }
@@ -132,8 +157,10 @@ func SetOutQuantity(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u <= 16 && u > 0 {
 			c.I2PConfig.OutQuantity = strconv.Itoa(u)
+			log.WithField("outQuantity", u).Debug("Set outbound tunnel quantity")
 			return nil
 		}
+		log.WithField("outQuantity", u).Error("Invalid outbound tunnel quantity")
 		return fmt.Errorf("Invalid outbound tunnel quantity")
 	}
 }
@@ -143,8 +170,10 @@ func SetInBackups(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 6 && u >= 0 {
 			c.I2PConfig.InBackupQuantity = strconv.Itoa(u)
+			log.WithField("inBackups", u).Debug("Set inbound tunnel backups")
 			return nil
 		}
+		log.WithField("inBackups", u).Error("Invalid inbound tunnel backup quantity")
 		return fmt.Errorf("Invalid inbound tunnel backup quantity")
 	}
 }
@@ -154,8 +183,10 @@ func SetOutBackups(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 6 && u >= 0 {
 			c.I2PConfig.OutBackupQuantity = strconv.Itoa(u)
+			log.WithField("outBackups", u).Debug("Set outbound tunnel backups")
 			return nil
 		}
+		log.WithField("outBackups", u).Error("Invalid outbound tunnel backup quantity")
 		return fmt.Errorf("Invalid outbound tunnel backup quantity")
 	}
 }
@@ -168,6 +199,7 @@ func SetEncrypt(b bool) func(*SAMEmit) error {
 			return nil
 		}
 		c.I2PConfig.EncryptLeaseSet = "false"
+		log.WithField("encrypt", b).Debug("Set lease set encryption")
 		return nil
 	}
 }
@@ -176,6 +208,7 @@ func SetEncrypt(b bool) func(*SAMEmit) error {
 func SetLeaseSetKey(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		c.I2PConfig.LeaseSetKey = s
+		log.WithField("leaseSetKey", s).Debug("Set lease set key")
 		return nil
 	}
 }
@@ -184,6 +217,7 @@ func SetLeaseSetKey(s string) func(*SAMEmit) error {
 func SetLeaseSetPrivateKey(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		c.I2PConfig.LeaseSetPrivateKey = s
+		log.WithField("leaseSetPrivateKey", s).Debug("Set lease set private key")
 		return nil
 	}
 }
@@ -192,6 +226,7 @@ func SetLeaseSetPrivateKey(s string) func(*SAMEmit) error {
 func SetLeaseSetPrivateSigningKey(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		c.I2PConfig.LeaseSetPrivateSigningKey = s
+		log.WithField("leaseSetPrivateSigningKey", s).Debug("Set lease set private signing key")
 		return nil
 	}
 }
@@ -200,6 +235,7 @@ func SetLeaseSetPrivateSigningKey(s string) func(*SAMEmit) error {
 func SetMessageReliability(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		c.I2PConfig.MessageReliability = s
+		log.WithField("messageReliability", s).Debug("Set message reliability")
 		return nil
 	}
 }
@@ -212,6 +248,7 @@ func SetAllowZeroIn(b bool) func(*SAMEmit) error {
 			return nil
 		}
 		c.I2PConfig.InAllowZeroHop = "false"
+		log.WithField("allowZeroIn", b).Debug("Set allow zero-hop inbound")
 		return nil
 	}
 }
@@ -224,6 +261,7 @@ func SetAllowZeroOut(b bool) func(*SAMEmit) error {
 			return nil
 		}
 		c.I2PConfig.OutAllowZeroHop = "false"
+		log.WithField("allowZeroOut", b).Debug("Set allow zero-hop outbound")
 		return nil
 	}
 }
@@ -236,6 +274,7 @@ func SetCompress(b bool) func(*SAMEmit) error {
 			return nil
 		}
 		c.I2PConfig.UseCompression = "false"
+		log.WithField("compress", b).Debug("Set compression")
 		return nil
 	}
 }
@@ -248,6 +287,7 @@ func SetFastRecieve(b bool) func(*SAMEmit) error {
 			return nil
 		}
 		c.I2PConfig.FastRecieve = "false"
+		log.WithField("fastReceive", b).Debug("Set fast receive")
 		return nil
 	}
 }
@@ -260,6 +300,7 @@ func SetReduceIdle(b bool) func(*SAMEmit) error {
 			return nil
 		}
 		c.I2PConfig.ReduceIdle = "false"
+		log.WithField("reduceIdle", b).Debug("Set reduce idle")
 		return nil
 	}
 }
@@ -269,9 +310,12 @@ func SetReduceIdleTime(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		c.I2PConfig.ReduceIdleTime = "300000"
 		if u >= 6 {
-			c.I2PConfig.ReduceIdleTime = strconv.Itoa((u * 60) * 1000)
+			idleTime := strconv.Itoa((u * 60) * 1000)
+			c.I2PConfig.ReduceIdleTime = idleTime
+			log.WithField("reduceIdleTime", idleTime).Debug("Set reduce idle time")
 			return nil
 		}
+		log.WithField("minutes", u).Error("Invalid reduce idle timeout")
 		return fmt.Errorf("Invalid reduce idle timeout(Measured in minutes) %v", u)
 	}
 }
@@ -282,8 +326,10 @@ func SetReduceIdleTimeMs(u int) func(*SAMEmit) error {
 		c.I2PConfig.ReduceIdleTime = "300000"
 		if u >= 300000 {
 			c.I2PConfig.ReduceIdleTime = strconv.Itoa(u)
+			log.WithField("reduceIdleTimeMs", u).Debug("Set reduce idle time in milliseconds")
 			return nil
 		}
+		log.WithField("milliseconds", u).Error("Invalid reduce idle timeout")
 		return fmt.Errorf("Invalid reduce idle timeout(Measured in milliseconds) %v", u)
 	}
 }
@@ -293,8 +339,10 @@ func SetReduceIdleQuantity(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 5 {
 			c.I2PConfig.ReduceIdleQuantity = strconv.Itoa(u)
+			log.WithField("reduceIdleQuantity", u).Debug("Set reduce idle quantity")
 			return nil
 		}
+		log.WithField("quantity", u).Error("Invalid reduce tunnel quantity")
 		return fmt.Errorf("Invalid reduce tunnel quantity")
 	}
 }
@@ -316,9 +364,15 @@ func SetCloseIdleTime(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		c.I2PConfig.CloseIdleTime = "300000"
 		if u >= 6 {
-			c.I2PConfig.CloseIdleTime = strconv.Itoa((u * 60) * 1000)
+			idleTime := strconv.Itoa((u * 60) * 1000)
+			c.I2PConfig.CloseIdleTime = idleTime
+			log.WithFields(logrus.Fields{
+				"minutes":      u,
+				"milliseconds": idleTime,
+			}).Debug("Set close idle time")
 			return nil
 		}
+		log.WithField("minutes", u).Error("Invalid close idle timeout")
 		return fmt.Errorf("Invalid close idle timeout(Measured in minutes) %v", u)
 	}
 }
@@ -329,6 +383,7 @@ func SetCloseIdleTimeMs(u int) func(*SAMEmit) error {
 		c.I2PConfig.CloseIdleTime = "300000"
 		if u >= 300000 {
 			c.I2PConfig.CloseIdleTime = strconv.Itoa(u)
+			log.WithField("closeIdleTimeMs", u).Debug("Set close idle time in milliseconds")
 			return nil
 		}
 		return fmt.Errorf("Invalid close idle timeout(Measured in milliseconds) %v", u)
@@ -340,15 +395,19 @@ func SetAccessListType(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if s == "whitelist" {
 			c.I2PConfig.AccessListType = "whitelist"
+			log.Debug("Set access list type to whitelist")
 			return nil
 		} else if s == "blacklist" {
 			c.I2PConfig.AccessListType = "blacklist"
+			log.Debug("Set access list type to blacklist")
 			return nil
 		} else if s == "none" {
 			c.I2PConfig.AccessListType = ""
+			log.Debug("Set access list type to none")
 			return nil
 		} else if s == "" {
 			c.I2PConfig.AccessListType = ""
+			log.Debug("Set access list type to none")
 			return nil
 		}
 		return fmt.Errorf("Invalid Access list type(whitelist, blacklist, none)")
@@ -362,8 +421,10 @@ func SetAccessList(s []string) func(*SAMEmit) error {
 			for _, a := range s {
 				c.I2PConfig.AccessList = append(c.I2PConfig.AccessList, a)
 			}
+			log.WithField("accessList", s).Debug("Set access list")
 			return nil
 		}
+		log.Debug("No access list set (empty list provided)")
 		return nil
 	}
 }
