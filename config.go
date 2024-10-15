@@ -2,6 +2,7 @@ package sam3
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"math/rand"
 	"net"
 	"strconv"
@@ -67,6 +68,10 @@ func (f *I2PConfig) Sam() string {
 	if f.SamPort != "" {
 		port = f.SamPort
 	}
+	log.WithFields(logrus.Fields{
+		"host": host,
+		"port": port,
+	}).Debug("SAM address constructed")
 	return host + ":" + port
 }
 
@@ -80,6 +85,10 @@ func (f *I2PConfig) SetSAMAddress(addr string) {
 	}
 	f.SamPort = "7656"
 	f.SamHost = "127.0.0.1"
+	log.WithFields(logrus.Fields{
+		"host": f.SamHost,
+		"port": f.SamPort,
+	}).Debug("SAM address set")
 }
 
 func (f *I2PConfig) ID() string {
@@ -89,6 +98,7 @@ func (f *I2PConfig) ID() string {
 			b[i] = "abcdefghijklmnopqrstuvwxyz"[rand.Intn(len("abcdefghijklmnopqrstuvwxyz"))]
 		}
 		f.TunName = string(b)
+		log.WithField("TunName", f.TunName).Debug("Generated random tunnel name")
 	}
 	return " ID=" + f.TunName + " "
 }
@@ -104,100 +114,139 @@ func (f *I2PConfig) Leasesetsettings() (string, string, string) {
 	if f.LeaseSetPrivateSigningKey != "" {
 		t = " i2cp.leaseSetPrivateSigningKey=" + f.LeaseSetPrivateSigningKey + " "
 	}
+	log.WithFields(logrus.Fields{
+		"leaseSetKey":               r,
+		"leaseSetPrivateKey":        s,
+		"leaseSetPrivateSigningKey": t,
+	}).Debug("Lease set settings constructed")
 	return r, s, t
 }
 
 func (f *I2PConfig) FromPort() string {
 	if f.samMax() < 3.1 {
+		log.Debug("SAM version < 3.1, FromPort not applicable")
 		return ""
 	}
 	if f.Fromport != "0" {
+		log.WithField("fromPort", f.Fromport).Debug("FromPort set")
 		return " FROM_PORT=" + f.Fromport + " "
 	}
+	log.Debug("FromPort not set")
 	return ""
 }
 
 func (f *I2PConfig) ToPort() string {
 	if f.samMax() < 3.1 {
+		log.Debug("SAM version < 3.1, ToPort not applicable")
 		return ""
 	}
 	if f.Toport != "0" {
+		log.WithField("toPort", f.Toport).Debug("ToPort set")
 		return " TO_PORT=" + f.Toport + " "
 	}
+	log.Debug("ToPort not set")
 	return ""
 }
 
 func (f *I2PConfig) SessionStyle() string {
 	if f.Style != "" {
+		log.WithField("style", f.Style).Debug("Session style set")
 		return " STYLE=" + f.Style + " "
 	}
+	log.Debug("Using default STREAM style")
 	return " STYLE=STREAM "
 }
 
 func (f *I2PConfig) samMax() float64 {
 	i, err := strconv.Atoi(f.SamMax)
 	if err != nil {
+		log.WithError(err).Warn("Failed to parse SamMax, using default 3.1")
 		return 3.1
 	}
+	log.WithField("samMax", float64(i)).Debug("SAM max version parsed")
 	return float64(i)
 }
 
 func (f *I2PConfig) MinSAM() string {
 	if f.SamMin == "" {
+		log.Debug("Using default MinSAM: 3.0")
 		return "3.0"
 	}
+	log.WithField("minSAM", f.SamMin).Debug("MinSAM set")
 	return f.SamMin
 }
 
 func (f *I2PConfig) MaxSAM() string {
 	if f.SamMax == "" {
+		log.Debug("Using default MaxSAM: 3.1")
 		return "3.1"
 	}
+	log.WithField("maxSAM", f.SamMax).Debug("MaxSAM set")
 	return f.SamMax
 }
 
 func (f *I2PConfig) DestinationKey() string {
 	if &f.DestinationKeys != nil {
+		log.WithField("destinationKey", f.DestinationKeys.String()).Debug("Destination key set")
 		return " DESTINATION=" + f.DestinationKeys.String() + " "
 	}
+	log.Debug("Using TRANSIENT destination")
 	return " DESTINATION=TRANSIENT "
 }
 
 func (f *I2PConfig) SignatureType() string {
 	if f.samMax() < 3.1 {
+		log.Debug("SAM version < 3.1, SignatureType not applicable")
 		return ""
 	}
 	if f.SigType != "" {
+		log.WithField("sigType", f.SigType).Debug("Signature type set")
 		return " SIGNATURE_TYPE=" + f.SigType + " "
 	}
+	log.Debug("Signature type not set")
 	return ""
 }
 
 func (f *I2PConfig) EncryptLease() string {
 	if f.EncryptLeaseSet == "true" {
+		log.Debug("Lease set encryption enabled")
 		return " i2cp.encryptLeaseSet=true "
 	}
+	log.Debug("Lease set encryption not enabled")
 	return ""
 }
 
 func (f *I2PConfig) Reliability() string {
 	if f.MessageReliability != "" {
+		log.WithField("reliability", f.MessageReliability).Debug("Message reliability set")
 		return " i2cp.messageReliability=" + f.MessageReliability + " "
 	}
+	log.Debug("Message reliability not set")
 	return ""
 }
 
 func (f *I2PConfig) Reduce() string {
 	if f.ReduceIdle == "true" {
+		log.WithFields(logrus.Fields{
+			"reduceIdle":         f.ReduceIdle,
+			"reduceIdleTime":     f.ReduceIdleTime,
+			"reduceIdleQuantity": f.ReduceIdleQuantity,
+		}).Debug("Reduce idle settings applied")
 		return "i2cp.reduceOnIdle=" + f.ReduceIdle + "i2cp.reduceIdleTime=" + f.ReduceIdleTime + "i2cp.reduceQuantity=" + f.ReduceIdleQuantity
 	}
+	log.Debug("Reduce idle settings not applied")
 	return ""
 }
 
 func (f *I2PConfig) Close() string {
 	if f.CloseIdle == "true" {
+		log.WithFields(logrus.Fields{
+			"closeIdle":     f.CloseIdle,
+			"closeIdleTime": f.CloseIdleTime,
+		}).Debug("Close idle settings applied")
 		return "i2cp.closeOnIdle=" + f.CloseIdle + "i2cp.closeIdleTime=" + f.CloseIdleTime
 	}
+	log.Debug("Close idle settings not applied")
 	return ""
 }
 
@@ -212,6 +261,7 @@ func (f *I2PConfig) DoZero() string {
 	if f.FastRecieve == "true" {
 		r += " " + f.FastRecieve + " "
 	}
+	log.WithField("zeroHopSettings", r).Debug("Zero hop settings applied")
 	return r
 }
 func (f *I2PConfig) Print() []string {
@@ -242,12 +292,16 @@ func (f *I2PConfig) Print() []string {
 
 func (f *I2PConfig) Accesslisttype() string {
 	if f.AccessListType == "whitelist" {
+		log.Debug("Access list type set to whitelist")
 		return "i2cp.enableAccessList=true"
 	} else if f.AccessListType == "blacklist" {
+		log.Debug("Access list type set to blacklist")
 		return "i2cp.enableBlackList=true"
 	} else if f.AccessListType == "none" {
+		log.Debug("Access list type set to none")
 		return ""
 	}
+	log.Debug("Access list type not set")
 	return ""
 }
 
@@ -257,20 +311,25 @@ func (f *I2PConfig) Accesslist() string {
 		for _, s := range f.AccessList {
 			r += s + ","
 		}
+		log.WithField("accessList", r).Debug("Access list generated")
 		return "i2cp.accessList=" + strings.TrimSuffix(r, ",")
 	}
+	log.Debug("Access list not set")
 	return ""
 }
 
 func (f *I2PConfig) LeaseSetEncryptionType() string {
 	if f.LeaseSetEncryption == "" {
+		log.Debug("Using default lease set encryption type: 4,0")
 		return "i2cp.leaseSetEncType=4,0"
 	}
 	for _, s := range strings.Split(f.LeaseSetEncryption, ",") {
 		if _, err := strconv.Atoi(s); err != nil {
-			panic("Invalid encrypted leaseSet type: " + s)
+			log.WithField("invalidType", s).Panic("Invalid encrypted leaseSet type")
+			//panic("Invalid encrypted leaseSet type: " + s)
 		}
 	}
+	log.WithField("leaseSetEncType", f.LeaseSetEncryption).Debug("Lease set encryption type set")
 	return "i2cp.leaseSetEncType=" + f.LeaseSetEncryption
 }
 
