@@ -285,20 +285,26 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 			conn.Close()
 			return nil, errors.New("SAMv3 created a tunnel with keys other than the ones we asked it for")
 		}
+		log.Debug("Successfully created new session")
 		return conn, nil //&StreamSession{id, conn, keys, nil, sync.RWMutex{}, nil}, nil
 	} else if text == session_DUPLICATE_ID {
+		log.Error("Duplicate tunnel name")
 		conn.Close()
 		return nil, errors.New("Duplicate tunnel name")
 	} else if text == session_DUPLICATE_DEST {
+		log.Error("Duplicate destination")
 		conn.Close()
 		return nil, errors.New("Duplicate destination")
 	} else if text == session_INVALID_KEY {
+		log.Error("Invalid key for SAM session")
 		conn.Close()
 		return nil, errors.New("Invalid key - SAM session")
 	} else if strings.HasPrefix(text, session_I2P_ERROR) {
+		log.WithField("error", text[len(session_I2P_ERROR):]).Error("I2P error")
 		conn.Close()
 		return nil, errors.New("I2P error " + text[len(session_I2P_ERROR):])
 	} else {
+		log.WithField("reply", text).Error("Unable to parse SAMv3 reply")
 		conn.Close()
 		return nil, errors.New("Unable to parse SAMv3 reply: " + text)
 	}
@@ -306,5 +312,6 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 
 // close this sam session
 func (sam *SAM) Close() error {
+	log.Debug("Closing SAM session")
 	return sam.conn.Close()
 }
