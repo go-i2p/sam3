@@ -18,6 +18,10 @@ import (
 	. "github.com/eyedeekay/i2pkeys"
 )
 
+func init() {
+	InitializeLogger()
+}
+
 // Used for controlling I2Ps SAMv3.
 type SAM struct {
 	address  string

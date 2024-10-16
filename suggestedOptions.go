@@ -99,6 +99,7 @@ func PrimarySessionString() string {
 var PrimarySessionSwitch string = PrimarySessionString()
 
 func getEnv(key, fallback string) string {
+	InitializeLogger()
 	value, ok := os.LookupEnv(key)
 	if !ok {
 		log.WithFields(logrus.Fields{
