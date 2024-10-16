@@ -350,8 +350,10 @@ func (sam *PrimarySession) NewUniqueStreamSubSession(id string) (*StreamSession,
 // Creates a new StreamSession with the I2CP- and streaminglib options as
 // specified. See the I2P documentation for a full list of options.
 func (sam *PrimarySession) NewStreamSubSessionWithPorts(id, from, to string) (*StreamSession, error) {
+	log.WithFields(logrus.Fields{"id": id, "from": from, "to": to}).Debug("NewStreamSubSessionWithPorts called")
 	conn, err := sam.newGenericSubSessionWithSignatureAndPorts("STREAM", id, from, to, []string{})
 	if err != nil {
+		log.WithError(err).Error("Failed to create new generic sub-session with signature and ports")
 		return nil, err
 	}
 	return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, sam.keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, from, to}, nil
@@ -370,86 +372,111 @@ func (s *PrimarySession) I2PListener(name string) (*StreamListener, error) {
 // Creates a new datagram session. udpPort is the UDP port SAM is listening on,
 // and if you set it to zero, it will use SAMs standard UDP port.
 func (s *PrimarySession) NewDatagramSubSession(id string, udpPort int) (*DatagramSession, error) {
+	log.WithFields(logrus.Fields{"id": id, "udpPort": udpPort}).Debug("NewDatagramSubSession called")
 	if udpPort > 65335 || udpPort < 0 {
+		log.WithField("udpPort", udpPort).Error("Invalid UDP port")
 		return nil, errors.New("udpPort needs to be in the intervall 0-65335")
 	}
 	if udpPort == 0 {
 		udpPort = 7655
+		log.Debug("Using default UDP port 7655")
 	}
 	lhost, _, err := SplitHostPort(s.conn.LocalAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to split local host port")
 		s.Close()
 		return nil, err
 	}
 	lUDPAddr, err := net.ResolveUDPAddr("udp4", lhost+":0")
 	if err != nil {
+		log.WithError(err).Error("Failed to resolve local UDP address")
 		return nil, err
 	}
 	udpconn, err := net.ListenUDP("udp4", lUDPAddr)
 	if err != nil {
+		log.WithError(err).Error("Failed to listen on UDP")
 		return nil, err
 	}
 	rhost, _, err := SplitHostPort(s.conn.RemoteAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to split remote host port")
 		s.Close()
 		return nil, err
 	}
 	rUDPAddr, err := net.ResolveUDPAddr("udp4", rhost+":"+strconv.Itoa(udpPort))
 	if err != nil {
+		log.WithError(err).Error("Failed to resolve remote UDP address")
 		return nil, err
 	}
 	_, lport, err := net.SplitHostPort(udpconn.LocalAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to get local port")
 		s.Close()
 		return nil, err
 	}
 	conn, err := s.newGenericSubSession("DATAGRAM", id, []string{"PORT=" + lport})
 	if err != nil {
+		log.WithError(err).Error("Failed to create new generic sub-session")
 		return nil, err
 	}
+
+	log.WithFields(logrus.Fields{"id": id, "localPort": lport}).Info("Created new datagram sub-session")
 	return &DatagramSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr, nil}, nil
 }
 
 // Creates a new raw session. udpPort is the UDP port SAM is listening on,
 // and if you set it to zero, it will use SAMs standard UDP port.
 func (s *PrimarySession) NewRawSubSession(id string, udpPort int) (*RawSession, error) {
+	log.WithFields(logrus.Fields{"id": id, "udpPort": udpPort}).Debug("NewRawSubSession called")
+
 	if udpPort > 65335 || udpPort < 0 {
+		log.WithField("udpPort", udpPort).Error("Invalid UDP port")
 		return nil, errors.New("udpPort needs to be in the intervall 0-65335")
 	}
 	if udpPort == 0 {
 		udpPort = 7655
+		log.Debug("Using default UDP port 7655")
 	}
 	lhost, _, err := SplitHostPort(s.conn.LocalAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to split local host port")
 		s.Close()
 		return nil, err
 	}
 	lUDPAddr, err := net.ResolveUDPAddr("udp4", lhost+":0")
 	if err != nil {
+		log.WithError(err).Error("Failed to resolve local UDP address")
 		return nil, err
 	}
 	udpconn, err := net.ListenUDP("udp4", lUDPAddr)
 	if err != nil {
+		log.WithError(err).Error("Failed to listen on UDP")
 		return nil, err
 	}
 	rhost, _, err := SplitHostPort(s.conn.RemoteAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to split remote host port")
 		s.Close()
 		return nil, err
 	}
 	rUDPAddr, err := net.ResolveUDPAddr("udp4", rhost+":"+strconv.Itoa(udpPort))
 	if err != nil {
+		log.WithError(err).Error("Failed to resolve remote UDP address")
 		return nil, err
 	}
 	_, lport, err := net.SplitHostPort(udpconn.LocalAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to get local port")
 		s.Close()
 		return nil, err
 	}
 	//	conn, err := s.newGenericSubSession("RAW", id, s.keys, options, []string{"PORT=" + lport})
 	conn, err := s.newGenericSubSession("RAW", id, []string{"PORT=" + lport})
 	if err != nil {
+		log.WithError(err).Error("Failed to create new generic sub-session")
 		return nil, err
 	}
+
+	log.WithFields(logrus.Fields{"id": id, "localPort": lport}).Info("Created new raw sub-session")
 	return &RawSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr}, nil
 }
