@@ -80,7 +80,7 @@ func (s *SAM) NewRawSession(id string, keys i2pkeys.I2PKeys, options []string, u
 		"id":            id,
 		"localPort":     lport,
 		"remoteUDPAddr": rUDPAddr,
-	}).Info("Created new RawSession")
+	}).Debug("Created new RawSession")
 
 	return &RawSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, keys, rUDPAddr}, nil
 }
@@ -143,7 +143,7 @@ func (s *RawSession) Close() error {
 		log.WithError(err2).Error("Failed to close UDP connection")
 	}
 
-	log.Info("RawSession closed")
+	log.Debug("RawSession closed")
 	return err2
 }
 

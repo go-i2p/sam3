@@ -420,7 +420,7 @@ func (s *PrimarySession) NewDatagramSubSession(id string, udpPort int) (*Datagra
 		return nil, err
 	}
 
-	log.WithFields(logrus.Fields{"id": id, "localPort": lport}).Info("Created new datagram sub-session")
+	log.WithFields(logrus.Fields{"id": id, "localPort": lport}).Debug("Created new datagram sub-session")
 	return &DatagramSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr, nil}, nil
 }
 
@@ -477,6 +477,6 @@ func (s *PrimarySession) NewRawSubSession(id string, udpPort int) (*RawSession, 
 		return nil, err
 	}
 
-	log.WithFields(logrus.Fields{"id": id, "localPort": lport}).Info("Created new raw sub-session")
+	log.WithFields(logrus.Fields{"id": id, "localPort": lport}).Debug("Created new raw sub-session")
 	return &RawSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr}, nil
 }

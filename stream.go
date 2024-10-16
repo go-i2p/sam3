@@ -60,7 +60,7 @@ func (ss *StreamSession) ID() string {
 }
 
 func (ss *StreamSession) Close() error {
-	log.WithField("id", ss.id).Info("Closing StreamSession")
+	log.WithField("id", ss.id).Debug("Closing StreamSession")
 	return ss.conn.Close()
 }
 
@@ -86,7 +86,7 @@ func (sam *SAM) NewStreamSession(id string, keys i2pkeys.I2PKeys, options []stri
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("id", id).Info("Created new StreamSession")
+	log.WithField("id", id).Debug("Created new StreamSession")
 	return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, "0", "0"}, nil
 }
 
@@ -98,7 +98,7 @@ func (sam *SAM) NewStreamSessionWithSignature(id string, keys i2pkeys.I2PKeys, o
 	if err != nil {
 		return nil, err
 	}
-	log.WithFields(logrus.Fields{"id": id, "sigType": sigType}).Info("Created new StreamSession with signature")
+	log.WithFields(logrus.Fields{"id": id, "sigType": sigType}).Debug("Created new StreamSession with signature")
 	return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), sigType, "0", "0"}, nil
 }
 
@@ -110,7 +110,7 @@ func (sam *SAM) NewStreamSessionWithSignatureAndPorts(id, from, to string, keys 
 	if err != nil {
 		return nil, err
 	}
-	log.WithFields(logrus.Fields{"id": id, "from": from, "to": to, "sigType": sigType}).Info("Created new StreamSession with signature and ports")
+	log.WithFields(logrus.Fields{"id": id, "from": from, "to": to, "sigType": sigType}).Debug("Created new StreamSession with signature and ports")
 	return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), sigType, from, to}, nil
 }
 

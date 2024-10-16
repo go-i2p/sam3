@@ -73,7 +73,7 @@ func (sam *SAMResolver) Resolve(name string) (i2pkeys.I2PAddr, error) {
 			continue
 		} else if strings.HasPrefix(text, "VALUE=") {
 			addr := i2pkeys.I2PAddr(text[6:])
-			log.WithField("addr", addr).Info("Name resolved successfully")
+			log.WithField("addr", addr).Debug("Name resolved successfully")
 			return i2pkeys.I2PAddr(text[6:]), nil
 		} else if strings.HasPrefix(text, "MESSAGE=") {
 			errStr += " " + text[8:]
