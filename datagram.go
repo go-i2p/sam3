@@ -3,6 +3,7 @@ package sam3
 import (
 	"bytes"
 	"errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"strconv"
 	"time"
@@ -27,67 +28,99 @@ type DatagramSession struct {
 // Creates a new datagram session. udpPort is the UDP port SAM is listening on,
 // and if you set it to zero, it will use SAMs standard UDP port.
 func (s *SAM) NewDatagramSession(id string, keys i2pkeys.I2PKeys, options []string, udpPort int) (*DatagramSession, error) {
+	log.WithFields(logrus.Fields{
+		"id":      id,
+		"udpPort": udpPort,
+	}).Debug("Creating new DatagramSession")
+
 	if udpPort > 65335 || udpPort < 0 {
+		log.WithField("udpPort", udpPort).Error("Invalid UDP port")
 		return nil, errors.New("udpPort needs to be in the intervall 0-65335")
 	}
 	if udpPort == 0 {
 		udpPort = 7655
+		log.Debug("Using default UDP port 7655")
 	}
 	lhost, _, err := SplitHostPort(s.conn.LocalAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to split local host port")
 		s.Close()
 		return nil, err
 	}
 	lUDPAddr, err := net.ResolveUDPAddr("udp4", lhost+":0")
 	if err != nil {
+		log.WithError(err).Error("Failed to resolve local UDP address")
 		return nil, err
 	}
 	udpconn, err := net.ListenUDP("udp4", lUDPAddr)
 	if err != nil {
+		log.WithError(err).Error("Failed to listen on UDP")
 		return nil, err
 	}
 	rhost, _, err := SplitHostPort(s.conn.RemoteAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to split remote host port")
 		s.Close()
 		return nil, err
 	}
 	rUDPAddr, err := net.ResolveUDPAddr("udp4", rhost+":"+strconv.Itoa(udpPort))
 	if err != nil {
+		log.WithError(err).Error("Failed to resolve remote UDP address")
 		return nil, err
 	}
 	_, lport, err := net.SplitHostPort(udpconn.LocalAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to get local port")
 		s.Close()
 		return nil, err
 	}
 	conn, err := s.newGenericSession("DATAGRAM", id, keys, options, []string{" PORT=" + lport})
 	if err != nil {
+		log.WithError(err).Error("Failed to create generic session")
 		return nil, err
 	}
+
+	log.WithField("id", id).Info("DatagramSession created successfully")
 	return &DatagramSession{s.address, id, conn, udpconn, keys, rUDPAddr, nil}, nil
 }
 
 func (s *DatagramSession) B32() string {
-	return s.keys.Addr().Base32()
+	b32 := s.keys.Addr().Base32()
+	log.WithField("b32", b32).Debug("Generated B32 address")
+	return b32
 }
 
 func (s *DatagramSession) Dial(net string, addr string) (*DatagramSession, error) {
+	log.WithFields(logrus.Fields{
+		"net":  net,
+		"addr": addr,
+	}).Debug("Dialing address")
 	netaddr, err := s.Lookup(addr)
 	if err != nil {
+		log.WithError(err).Error("Lookup failed")
 		return nil, err
 	}
 	return s.DialI2PRemote(net, netaddr)
 }
 
 func (s *DatagramSession) DialRemote(net, addr string) (net.PacketConn, error) {
+	log.WithFields(logrus.Fields{
+		"net":  net,
+		"addr": addr,
+	}).Debug("Dialing remote address")
 	netaddr, err := s.Lookup(addr)
 	if err != nil {
+		log.WithError(err).Error("Lookup failed")
 		return nil, err
 	}
 	return s.DialI2PRemote(net, netaddr)
 }
 
 func (s *DatagramSession) DialI2PRemote(net string, addr net.Addr) (*DatagramSession, error) {
+	log.WithFields(logrus.Fields{
+		"net":  net,
+		"addr": addr,
+	}).Debug("Dialing I2P remote address")
 	switch addr.(type) {
 	case *i2pkeys.I2PAddr:
 		s.remoteAddr = addr.(*i2pkeys.I2PAddr)
@@ -99,6 +132,7 @@ func (s *DatagramSession) DialI2PRemote(net string, addr net.Addr) (*DatagramSes
 }
 
 func (s *DatagramSession) RemoteAddr() net.Addr {
+	log.WithField("remoteAddr", s.remoteAddr).Debug("Getting remote address")
 	return s.remoteAddr
 }
 
@@ -106,6 +140,7 @@ func (s *DatagramSession) RemoteAddr() net.Addr {
 // the number of bytes read, from what address it was sent, or an error.
 // implements net.PacketConn
 func (s *DatagramSession) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
+	log.Debug("Reading datagram")
 	// extra bytes to read the remote address of incomming datagram
 	buf := make([]byte, len(b)+4096)
 
@@ -114,6 +149,7 @@ func (s *DatagramSession) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
 		var saddr *net.UDPAddr
 		n, saddr, err = s.udpconn.ReadFromUDP(buf)
 		if err != nil {
+			log.WithError(err).Error("Failed to read from UDP")
 			return 0, i2pkeys.I2PAddr(""), err
 		}
 		if bytes.Equal(saddr.IP, s.rUDPAddr.IP) {
@@ -123,10 +159,12 @@ func (s *DatagramSession) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
 	}
 	i := bytes.IndexByte(buf, byte('\n'))
 	if i > 4096 || i > n {
+		log.Error("Could not parse incoming message remote address")
 		return 0, i2pkeys.I2PAddr(""), errors.New("Could not parse incomming message remote address.")
 	}
 	raddr, err := i2pkeys.NewI2PAddrFromString(string(buf[:i]))
 	if err != nil {
+		log.WithError(err).Error("Could not parse incoming message remote address")
 		return 0, i2pkeys.I2PAddr(""), errors.New("Could not parse incomming message remote address: " + err.Error())
 	}
 	// shift out the incomming address to contain only the data received
@@ -135,15 +173,18 @@ func (s *DatagramSession) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
 		return n - (i + 1), raddr, errors.New("Datagram did not fit into your buffer.")
 	} else {
 		copy(b, buf[i+1:n])
+		log.WithField("bytesRead", n-(i+1)).Debug("Datagram read successfully")
 		return n - (i + 1), raddr, nil
 	}
 }
 
 func (s *DatagramSession) Accept() (net.Conn, error) {
+	log.Debug("Accept called on DatagramSession")
 	return s, nil
 }
 
 func (s *DatagramSession) Read(b []byte) (n int, err error) {
+	log.Debug("Reading from DatagramSession")
 	rint, _, rerr := s.ReadFrom(b)
 	return rint, rerr
 }
@@ -152,29 +193,46 @@ func (s *DatagramSession) Read(b []byte) (n int, err error) {
 // writing, maximum size is 31 kilobyte, but this may change in the future.
 // Implements net.PacketConn.
 func (s *DatagramSession) WriteTo(b []byte, addr net.Addr) (n int, err error) {
+	log.WithFields(logrus.Fields{
+		"addr":        addr,
+		"datagramLen": len(b),
+	}).Debug("Writing datagram")
 	header := []byte("3.1 " + s.id + " " + addr.String() + "\n")
 	msg := append(header, b...)
 	n, err = s.udpconn.WriteToUDP(msg, s.rUDPAddr)
+	if err != nil {
+		log.WithError(err).Error("Failed to write to UDP")
+	} else {
+		log.WithField("bytesWritten", n).Debug("Datagram written successfully")
+	}
 	return n, err
 }
 
 func (s *DatagramSession) Write(b []byte) (int, error) {
+	log.WithField("dataLen", len(b)).Debug("Writing to DatagramSession")
 	return s.WriteTo(b, s.remoteAddr)
 }
 
 // Closes the DatagramSession. Implements net.PacketConn
 func (s *DatagramSession) Close() error {
+	log.Debug("Closing DatagramSession")
 	err := s.conn.Close()
 	err2 := s.udpconn.Close()
 	if err != nil {
+		log.WithError(err).Error("Failed to close connection")
 		return err
+	}
+	if err2 != nil {
+		log.WithError(err2).Error("Failed to close UDP connection")
 	}
 	return err2
 }
 
 // Returns the I2P destination of the DatagramSession.
 func (s *DatagramSession) LocalI2PAddr() i2pkeys.I2PAddr {
-	return s.keys.Addr()
+	addr := s.keys.Addr()
+	log.WithField("localI2PAddr", addr).Debug("Getting local I2P address")
+	return addr
 }
 
 // Implements net.PacketConn
@@ -187,12 +245,14 @@ func (s *DatagramSession) Addr() net.Addr {
 }
 
 func (s *DatagramSession) Lookup(name string) (a net.Addr, err error) {
+	log.WithField("name", name).Debug("Looking up address")
 	var sam *SAM
 	sam, err = NewSAM(s.samAddr)
 	if err == nil {
 		defer sam.Close()
 		a, err = sam.Lookup(name)
 	}
+	log.WithField("address", a).Debug("Lookup successful")
 	return
 }
 
@@ -200,19 +260,23 @@ func (s *DatagramSession) Lookup(name string) (a net.Addr, err error) {
 // net.PacketConn and does the same thing. Setting write deadlines for datagrams
 // is seldom done.
 func (s *DatagramSession) SetDeadline(t time.Time) error {
+	log.WithField("deadline", t).Debug("Setting deadline")
 	return s.udpconn.SetDeadline(t)
 }
 
 // Sets read deadline for the DatagramSession. Implements net.PacketConn
 func (s *DatagramSession) SetReadDeadline(t time.Time) error {
+	log.WithField("readDeadline", t).Debug("Setting read deadline")
 	return s.udpconn.SetReadDeadline(t)
 }
 
 // Sets the write deadline for the DatagramSession. Implements net.Packetconn.
 func (s *DatagramSession) SetWriteDeadline(t time.Time) error {
+	log.WithField("writeDeadline", t).Debug("Setting write deadline")
 	return s.udpconn.SetWriteDeadline(t)
 }
 
 func (s *DatagramSession) SetWriteBuffer(bytes int) error {
+	log.WithField("bytes", bytes).Debug("Setting write buffer")
 	return s.udpconn.SetWriteBuffer(bytes)
 }

@@ -96,6 +96,26 @@ Error handling was omitted in the above code for readability.
 * `go test -tags=nettest` runs the whole suite (takes 90+ sec to perform!)
 * `go test -short` runs the shorter variant, does not connect to anything
 
+## Verbosity ##
+Logging can be enabled and configured using the DEBUG_I2P environment variable. By default, logging is disabled.
+
+There are three available log levels:
+
+- Debug
+```shell
+export DEBUG_I2P=debug
+```
+- Warn
+```shell
+export DEBUG_I2P=warn
+```
+- Error
+```shell
+export DEBUG_I2P=error
+```
+
+If in case I2P_DEBUG is set to an unrecognized variable, it will fall back to "debug".
+
 ## License ##
 
 Public domain.

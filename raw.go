@@ -3,6 +3,7 @@ package sam3
 import (
 	"bytes"
 	"errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"strconv"
 	"time"
@@ -28,42 +29,59 @@ type RawSession struct {
 // Creates a new raw session. udpPort is the UDP port SAM is listening on,
 // and if you set it to zero, it will use SAMs standard UDP port.
 func (s *SAM) NewRawSession(id string, keys i2pkeys.I2PKeys, options []string, udpPort int) (*RawSession, error) {
+	log.WithFields(logrus.Fields{"id": id, "udpPort": udpPort}).Debug("Creating new RawSession")
+
 	if udpPort > 65335 || udpPort < 0 {
-		return nil, errors.New("udpPort needs to be in the intervall 0-65335")
+		log.WithField("udpPort", udpPort).Error("Invalid UDP port")
+		return nil, errors.New("udpPort needs to be in the interval 0-65335")
 	}
 	if udpPort == 0 {
 		udpPort = 7655
+		log.Debug("Using default UDP port 7655")
 	}
 	lhost, _, err := SplitHostPort(s.conn.LocalAddr().String())
 	if err != nil {
+		log.Debug("Using default UDP port 7655")
 		s.Close()
 		return nil, err
 	}
 	lUDPAddr, err := net.ResolveUDPAddr("udp4", lhost+":0")
 	if err != nil {
+		log.WithError(err).Error("Failed to resolve local UDP address")
 		return nil, err
 	}
 	udpconn, err := net.ListenUDP("udp4", lUDPAddr)
 	if err != nil {
+		log.WithError(err).Error("Failed to listen on UDP")
 		return nil, err
 	}
 	rhost, _, err := SplitHostPort(s.conn.RemoteAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to split remote host port")
 		s.Close()
 		return nil, err
 	}
 	rUDPAddr, err := net.ResolveUDPAddr("udp4", rhost+":"+strconv.Itoa(udpPort))
 	if err != nil {
+		log.WithError(err).Error("Failed to resolve remote UDP address")
 		return nil, err
 	}
 	_, lport, err := net.SplitHostPort(udpconn.LocalAddr().String())
 	if err != nil {
+		log.WithError(err).Error("Failed to get local port")
 		return nil, err
 	}
 	conn, err := s.newGenericSession("RAW", id, keys, options, []string{"PORT=" + lport})
 	if err != nil {
+		log.WithError(err).Error("Failed to create new generic session")
 		return nil, err
 	}
+	log.WithFields(logrus.Fields{
+		"id":            id,
+		"localPort":     lport,
+		"remoteUDPAddr": rUDPAddr,
+	}).Debug("Created new RawSession")
+
 	return &RawSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, keys, rUDPAddr}, nil
 }
 
@@ -71,37 +89,61 @@ func (s *SAM) NewRawSession(id string, keys i2pkeys.I2PKeys, options []string, u
 // the number of bytes read. Who sent the raw message can not be determined at
 // this layer - you need to do it (in a secure way!).
 func (s *RawSession) Read(b []byte) (n int, err error) {
+	log.Debug("Attempting to read raw datagram")
+
 	for {
 		// very basic protection: only accept incomming UDP messages from the IP of the SAM bridge
 		var saddr *net.UDPAddr
 		n, saddr, err = s.udpconn.ReadFromUDP(b)
 		if err != nil {
+			log.WithError(err).Error("Failed to read from UDP")
 			return 0, err
 		}
 		if bytes.Equal(saddr.IP, s.rUDPAddr.IP) {
+			log.WithField("senderIP", saddr.IP).Debug("Received datagram from SAM bridge IP")
 			continue
 		}
 		break
 	}
+
+	log.WithField("bytesRead", n).Debug("Successfully read raw datagram")
 	return n, nil
 }
 
 // Sends one raw datagram to the destination specified. At the time of writing,
 // maximum size is 32 kilobyte, but this may change in the future.
 func (s *RawSession) WriteTo(b []byte, addr i2pkeys.I2PAddr) (n int, err error) {
+	log.WithFields(logrus.Fields{
+		"destAddr": addr.String(),
+		"dataLen":  len(b),
+	}).Debug("Attempting to write raw datagram")
+
 	header := []byte("3.0 " + s.id + " " + addr.String() + "\n")
 	msg := append(header, b...)
 	n, err = s.udpconn.WriteToUDP(msg, s.rUDPAddr)
+	if err != nil {
+		log.WithError(err).Error("Failed to write to UDP")
+	}
+	log.WithField("bytesWritten", n).Debug("Successfully wrote raw datagram")
 	return n, err
 }
 
 // Closes the RawSession.
 func (s *RawSession) Close() error {
+	log.Debug("Closing RawSession")
+
 	err := s.conn.Close()
-	err2 := s.udpconn.Close()
 	if err != nil {
+		log.WithError(err).Error("Failed to close connection")
 		return err
 	}
+
+	err2 := s.udpconn.Close()
+	if err2 != nil {
+		log.WithError(err2).Error("Failed to close UDP connection")
+	}
+
+	log.Debug("RawSession closed")
 	return err2
 }
 

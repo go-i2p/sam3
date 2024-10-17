@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"math/rand"
 	"net"
@@ -16,6 +17,10 @@ import (
 
 	. "github.com/eyedeekay/i2pkeys"
 )
+
+func init() {
+	InitializeLogger()
+}
 
 // Used for controlling I2Ps SAMv3.
 type SAM struct {
@@ -52,40 +57,49 @@ func RandString() string {
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
+	log.WithField("randomString", string(b)).Debug("Generated random string")
 	return string(b)
 }
 
 // Creates a new controller for the I2P routers SAM bridge.
 func NewSAM(address string) (*SAM, error) {
+	log.WithField("address", address).Debug("Creating new SAM instance")
 	var s SAM
 	// TODO: clean this up
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
+		log.WithError(err).Error("Failed to dial SAM address")
 		return nil, fmt.Errorf("error dialing to address '%s': %w", address, err)
 	}
 	if _, err := conn.Write(s.Config.HelloBytes()); err != nil {
+		log.WithError(err).Error("Failed to write hello message")
 		conn.Close()
 		return nil, fmt.Errorf("error writing to address '%s': %w", address, err)
 	}
 	buf := make([]byte, 256)
 	n, err := conn.Read(buf)
 	if err != nil {
+		log.WithError(err).Error("Failed to read SAM response")
 		conn.Close()
 		return nil, fmt.Errorf("error reading onto buffer: %w", err)
 	}
 	if strings.Contains(string(buf[:n]), "HELLO REPLY RESULT=OK") {
+		log.Debug("SAM hello successful")
 		s.Config.I2PConfig.SetSAMAddress(address)
 		s.conn = conn
 		//s.Config.I2PConfig.DestinationKeys = nil
 		s.resolver, err = NewSAMResolver(&s)
 		if err != nil {
+			log.WithError(err).Error("Failed to create SAM resolver")
 			return nil, fmt.Errorf("error creating resolver: %w", err)
 		}
 		return &s, nil
 	} else if string(buf[:n]) == "HELLO REPLY RESULT=NOVERSION\n" {
+		log.Error("SAM bridge does not support SAMv3")
 		conn.Close()
 		return nil, errors.New("That SAM bridge does not support SAMv3.")
 	} else {
+		log.WithField("response", string(buf[:n])).Error("Unexpected SAM response")
 		conn.Close()
 		return nil, errors.New(string(buf[:n]))
 	}
@@ -93,27 +107,35 @@ func NewSAM(address string) (*SAM, error) {
 
 func (sam *SAM) Keys() (k *i2pkeys.I2PKeys) {
 	//TODO: copy them?
+	log.Debug("Retrieving SAM keys")
 	k = &sam.Config.I2PConfig.DestinationKeys
 	return
 }
 
 // read public/private keys from an io.Reader
 func (sam *SAM) ReadKeys(r io.Reader) (err error) {
+	log.Debug("Reading keys from io.Reader")
 	var keys i2pkeys.I2PKeys
 	keys, err = i2pkeys.LoadKeysIncompat(r)
 	if err == nil {
+		log.Debug("Keys loaded successfully")
 		sam.Config.I2PConfig.DestinationKeys = keys
 	}
+	log.WithError(err).Error("Failed to load keys")
 	return
 }
 
 // if keyfile fname does not exist
 func (sam *SAM) EnsureKeyfile(fname string) (keys i2pkeys.I2PKeys, err error) {
+	log.WithError(err).Error("Failed to load keys")
 	if fname == "" {
 		// transient
 		keys, err = sam.NewKeys()
 		if err == nil {
 			sam.Config.I2PConfig.DestinationKeys = keys
+			log.WithFields(logrus.Fields{
+				"keys": keys,
+			}).Debug("Generated new transient keys")
 		}
 	} else {
 		// persistent
@@ -129,6 +151,7 @@ func (sam *SAM) EnsureKeyfile(fname string) (keys i2pkeys.I2PKeys, err error) {
 				if err == nil {
 					err = i2pkeys.StoreKeysIncompat(keys, f)
 					f.Close()
+					log.Debug("Generated and saved new keys")
 				}
 			}
 		} else if err == nil {
@@ -139,9 +162,13 @@ func (sam *SAM) EnsureKeyfile(fname string) (keys i2pkeys.I2PKeys, err error) {
 				keys, err = i2pkeys.LoadKeysIncompat(f)
 				if err == nil {
 					sam.Config.I2PConfig.DestinationKeys = keys
+					log.Debug("Loaded existing keys from file")
 				}
 			}
 		}
+	}
+	if err != nil {
+		log.WithError(err).Error("Failed to ensure keyfile")
 	}
 	return
 }
@@ -150,16 +177,19 @@ func (sam *SAM) EnsureKeyfile(fname string) (keys i2pkeys.I2PKeys, err error) {
 // who has the private keys can send messages from. The public keys are the I2P
 // desination (the address) that anyone can send messages to.
 func (sam *SAM) NewKeys(sigType ...string) (i2pkeys.I2PKeys, error) {
+	log.WithField("sigType", sigType).Debug("Generating new keys")
 	sigtmp := ""
 	if len(sigType) > 0 {
 		sigtmp = sigType[0]
 	}
 	if _, err := sam.conn.Write([]byte("DEST GENERATE " + sigtmp + "\n")); err != nil {
+		log.WithError(err).Error("Failed to write DEST GENERATE command")
 		return i2pkeys.I2PKeys{}, fmt.Errorf("error with writing in SAM: %w", err)
 	}
 	buf := make([]byte, 8192)
 	n, err := sam.conn.Read(buf)
 	if err != nil {
+		log.WithError(err).Error("Failed to read SAM response for key generation")
 		return i2pkeys.I2PKeys{}, fmt.Errorf("error with reading in SAM: %w", err)
 	}
 	s := bufio.NewScanner(bytes.NewReader(buf[:n]))
@@ -177,15 +207,18 @@ func (sam *SAM) NewKeys(sigType ...string) (i2pkeys.I2PKeys, error) {
 		} else if strings.HasPrefix(text, "PRIV=") {
 			priv = text[5:]
 		} else {
+			log.Error("Failed to parse keys from SAM response")
 			return i2pkeys.I2PKeys{}, errors.New("Failed to parse keys.")
 		}
 	}
+	log.Debug("Successfully generated new keys")
 	return NewKeys(I2PAddr(pub), priv), nil
 }
 
 // Performs a lookup, probably this order: 1) routers known addresses, cached
 // addresses, 3) by asking peers in the I2P network.
 func (sam *SAM) Lookup(name string) (i2pkeys.I2PAddr, error) {
+	log.WithField("name", name).Debug("Looking up address")
 	return sam.resolver.Resolve(name)
 }
 
@@ -195,10 +228,12 @@ func (sam *SAM) Lookup(name string) (i2pkeys.I2PAddr, error) {
 // setting extra to something else than []string{}.
 // This sam3 instance is now a session
 func (sam *SAM) newGenericSession(style, id string, keys i2pkeys.I2PKeys, options []string, extras []string) (net.Conn, error) {
+	log.WithFields(logrus.Fields{"style": style, "id": id}).Debug("Creating new generic session")
 	return sam.newGenericSessionWithSignature(style, id, keys, Sig_NONE, options, extras)
 }
 
 func (sam *SAM) newGenericSessionWithSignature(style, id string, keys i2pkeys.I2PKeys, sigType string, options []string, extras []string) (net.Conn, error) {
+	log.WithFields(logrus.Fields{"style": style, "id": id, "sigType": sigType}).Debug("Creating new generic session with signature")
 	return sam.newGenericSessionWithSignatureAndPorts(style, id, "0", "0", keys, sigType, options, extras)
 }
 
@@ -208,6 +243,7 @@ func (sam *SAM) newGenericSessionWithSignature(style, id string, keys i2pkeys.I2
 // setting extra to something else than []string{}.
 // This sam3 instance is now a session
 func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to string, keys i2pkeys.I2PKeys, sigType string, options []string, extras []string) (net.Conn, error) {
+	log.WithFields(logrus.Fields{"style": style, "id": id, "from": from, "to": to, "sigType": sigType}).Debug("Creating new generic session with signature and ports")
 
 	optStr := GenerateOptionString(options)
 
@@ -221,13 +257,18 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 		tp = " TO_PORT=" + to
 	}
 	scmsg := []byte("SESSION CREATE STYLE=" + style + fp + tp + " ID=" + id + " DESTINATION=" + keys.String() + " " + optStr + strings.Join(extras, " ") + "\n")
+
+	log.WithField("message", string(scmsg)).Debug("Sending SESSION CREATE message")
+
 	for m, i := 0, 0; m != len(scmsg); i++ {
 		if i == 15 {
+			log.Error("Failed to write SESSION CREATE message after 15 attempts")
 			conn.Close()
 			return nil, errors.New("writing to SAM failed")
 		}
 		n, err := conn.Write(scmsg[m:])
 		if err != nil {
+			log.WithError(err).Error("Failed to write to SAM connection")
 			conn.Close()
 			return nil, fmt.Errorf("writing to connection failed: %w", err)
 		}
@@ -236,29 +277,38 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 	buf := make([]byte, 4096)
 	n, err := conn.Read(buf)
 	if err != nil {
+		log.WithError(err).Error("Failed to read SAM response")
 		conn.Close()
 		return nil, fmt.Errorf("reading from connection failed: %w", err)
 	}
 	text := string(buf[:n])
+	log.WithField("response", text).Debug("Received SAM response")
 	if strings.HasPrefix(text, session_OK) {
 		if keys.String() != text[len(session_OK):len(text)-1] {
+			log.Error("SAM created a tunnel with different keys than requested")
 			conn.Close()
 			return nil, errors.New("SAMv3 created a tunnel with keys other than the ones we asked it for")
 		}
+		log.Debug("Successfully created new session")
 		return conn, nil //&StreamSession{id, conn, keys, nil, sync.RWMutex{}, nil}, nil
 	} else if text == session_DUPLICATE_ID {
+		log.Error("Duplicate tunnel name")
 		conn.Close()
 		return nil, errors.New("Duplicate tunnel name")
 	} else if text == session_DUPLICATE_DEST {
+		log.Error("Duplicate destination")
 		conn.Close()
 		return nil, errors.New("Duplicate destination")
 	} else if text == session_INVALID_KEY {
+		log.Error("Invalid key for SAM session")
 		conn.Close()
 		return nil, errors.New("Invalid key - SAM session")
 	} else if strings.HasPrefix(text, session_I2P_ERROR) {
+		log.WithField("error", text[len(session_I2P_ERROR):]).Error("I2P error")
 		conn.Close()
 		return nil, errors.New("I2P error " + text[len(session_I2P_ERROR):])
 	} else {
+		log.WithField("reply", text).Error("Unable to parse SAMv3 reply")
 		conn.Close()
 		return nil, errors.New("Unable to parse SAMv3 reply: " + text)
 	}
@@ -266,5 +316,6 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 
 // close this sam session
 func (sam *SAM) Close() error {
+	log.Debug("Closing SAM session")
 	return sam.conn.Close()
 }
