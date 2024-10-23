@@ -13,7 +13,7 @@ var (
 	once sync.Once
 )
 
-func InitializeLogger() {
+func InitializeSAM3Logger() {
 	once.Do(func() {
 		log = logrus.New()
 		// We do not want to log by default
@@ -37,14 +37,14 @@ func InitializeLogger() {
 	})
 }
 
-// GetLogger returns the initialized logger
-func GetLogger() *logrus.Logger {
+// GetSAM3Logger returns the initialized logger
+func GetSAM3Logger() *logrus.Logger {
 	if log == nil {
-		InitializeLogger()
+		InitializeSAM3Logger()
 	}
 	return log
 }
 
 func init() {
-	InitializeLogger()
+	InitializeSAM3Logger()
 }

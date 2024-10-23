@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	InitializeLogger()
+	InitializeSAM3Logger()
 }
 
 // Used for controlling I2Ps SAMv3.
