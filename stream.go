@@ -27,6 +27,16 @@ type StreamSession struct {
 	to       string
 }
 
+// Read reads data from the stream.
+func (s *StreamSession) Read(buf []byte) (int, error) {
+	return s.conn.Read(buf)
+}
+
+// Write sends data over the stream.
+func (s *StreamSession) Write(data []byte) (int, error) {
+	return s.conn.Write(data)
+}
+
 func (s *StreamSession) SetDeadline(t time.Time) error {
 	log.WithField("deadline", t).Debug("Setting deadline for StreamSession")
 	return s.conn.SetDeadline(t)
@@ -42,40 +52,40 @@ func (s *StreamSession) SetWriteDeadline(t time.Time) error {
 	return s.conn.SetWriteDeadline(t)
 }
 
-func (ss *StreamSession) From() string {
-	return ss.from
+func (s *StreamSession) From() string {
+	return s.from
 }
 
-func (ss *StreamSession) To() string {
-	return ss.to
+func (s *StreamSession) To() string {
+	return s.to
 }
 
-func (ss *StreamSession) SignatureType() string {
-	return ss.sigType
+func (s *StreamSession) SignatureType() string {
+	return s.sigType
 }
 
 // Returns the local tunnel name of the I2P tunnel used for the stream session
-func (ss *StreamSession) ID() string {
-	return ss.id
+func (s *StreamSession) ID() string {
+	return s.id
 }
 
-func (ss *StreamSession) Close() error {
-	log.WithField("id", ss.id).Debug("Closing StreamSession")
-	return ss.conn.Close()
+func (s *StreamSession) Close() error {
+	log.WithField("id", s.id).Debug("Closing StreamSession")
+	return s.conn.Close()
 }
 
 // Returns the I2P destination (the address) of the stream session
-func (ss *StreamSession) Addr() i2pkeys.I2PAddr {
-	return ss.keys.Addr()
+func (s *StreamSession) Addr() i2pkeys.I2PAddr {
+	return s.keys.Addr()
 }
 
-func (ss *StreamSession) LocalAddr() net.Addr {
-	return ss.keys.Addr()
+func (s *StreamSession) LocalAddr() net.Addr {
+	return s.keys.Addr()
 }
 
 // Returns the keys associated with the stream session
-func (ss *StreamSession) Keys() i2pkeys.I2PKeys {
-	return ss.keys
+func (s *StreamSession) Keys() i2pkeys.I2PKeys {
+	return s.keys
 }
 
 // Creates a new StreamSession with the I2CP- and streaminglib options as
