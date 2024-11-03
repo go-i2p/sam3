@@ -27,6 +27,16 @@ type StreamSession struct {
 	to       string
 }
 
+// Read reads data from the stream.
+func (s *StreamSession) Read(buf []byte) (int, error) {
+	return s.conn.Read(buf)
+}
+
+// Write sends data over the stream.
+func (s *StreamSession) Write(data []byte) (int, error) {
+	return s.conn.Write(data)
+}
+
 func (s *StreamSession) SetDeadline(t time.Time) error {
 	log.WithField("deadline", t).Debug("Setting deadline for StreamSession")
 	return s.conn.SetDeadline(t)
