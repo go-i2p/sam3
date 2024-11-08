@@ -2,7 +2,6 @@ package sam3
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"testing"
 

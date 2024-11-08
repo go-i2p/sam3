@@ -2,7 +2,6 @@ package sam3
 
 import (
 	"fmt"
-	"log"
 	"testing"
 	"time"
 )
@@ -140,7 +139,7 @@ func ExamplePrimaryDatagramSession() {
 		fmt.Println(err.Error())
 		return
 	}
-	log.Println("Got message: '" + string(buf[:n]) + "'")
+	fmt.Println("Got message: '" + string(buf[:n]) + "'")
 	fmt.Println("Got message: " + string(buf[:n]))
 
 	return
