@@ -1,4 +1,4 @@
-module github.com/eyedeekay/sam3
+module github.com/go-i2p/sam3
 
 go 1.12
 
