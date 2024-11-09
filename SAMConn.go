@@ -4,12 +4,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/eyedeekay/i2pkeys"
+	"github.com/go-i2p/i2pkeys"
 )
 
 /*
 import (
-	. "github.com/eyedeekay/i2pkeys"
+	. "github.com/go-i2p/i2pkeys"
 )
 */
 // Implements net.Conn

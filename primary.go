@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eyedeekay/i2pkeys"
+	"github.com/go-i2p/i2pkeys"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/eyedeekay/i2pkeys"
+	"github.com/go-i2p/i2pkeys"
 )
 
 // I2PConfig is a struct which manages I2P configuration options

@@ -6,11 +6,11 @@ import (
 	"net"
 	"os"
 
-	"github.com/eyedeekay/i2pkeys"
-	"github.com/eyedeekay/sam3"
+	"github.com/go-i2p/i2pkeys"
+	"github.com/go-i2p/sam3"
 )
 
-// HEY! If you're looking at this, there's a good chance that `github.com/eyedeekay/onramp`
+// HEY! If you're looking at this, there's a good chance that `github.com/go-i2p/onramp`
 // is a better fit! Check it out.
 
 func NetListener(name, samaddr, keyspath string) (net.Listener, error) {
