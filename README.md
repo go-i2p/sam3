@@ -1,16 +1,8 @@
 # README #
 
-## !!IMPORTANT!!
-
-In the next version, I'll be moving the `i2pkeys` directory to it's own repository
-so I can avoid import cycle headaches. Please migrate to the new `i2pkeys` repository
-before upgrading your sam3 dependencies. You can probably do this by running:
-
-```sh
-find . -name '*.go' -exec sed -i 's|github.com/eyedeekay/sam3/i2pkeys|github.com/eyedeekay/i2pkeys|g' {} \;
-```
-
 STATUS: This project is maintained. I will respond to issues, pull requests, and feature requests within a few days.
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/go-i2p/sam3)](https://goreportcard.com/report/github.com/go-i2p/sam3)
 
 # README #
 
@@ -52,8 +44,8 @@ This library is much better than ccondom (that use BOB), much more stable and mu
 package main
 
 import (
-	"github.com/eyedeekay/sam3"
-	"github.com/eyedeekay/sam3/i2pkeys"
+	"github.com/go-i2p/sam3"
+	"github.com/go-i2p/sam3/i2pkeys"
 	"fmt"
 )
 
