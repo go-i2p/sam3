@@ -1,50 +1,23 @@
 package sam3
 
 import (
-	"github.com/sirupsen/logrus"
-	"io/ioutil"
-	"os"
-	"strings"
-	"sync"
+	logger "github.com/go-i2p/logger"
 )
 
 var (
-	log  *logrus.Logger
-	once sync.Once
+	log  *logger.Logger
 )
 
 func InitializeSAM3Logger() {
-	once.Do(func() {
-		log = logrus.New()
-		// We do not want to log by default
-		log.SetOutput(ioutil.Discard)
-		log.SetLevel(logrus.PanicLevel)
-		// Check if DEBUG_I2P is set
-		if logLevel := os.Getenv("DEBUG_I2P"); logLevel != "" {
-			log.SetOutput(os.Stdout)
-			switch strings.ToLower(logLevel) {
-			case "debug":
-				log.SetLevel(logrus.DebugLevel)
-			case "warn":
-				log.SetLevel(logrus.WarnLevel)
-			case "error":
-				log.SetLevel(logrus.ErrorLevel)
-			default:
-				log.SetLevel(logrus.DebugLevel)
-			}
-			log.WithField("level", log.GetLevel()).Debug("Logging enabled.")
-		}
-	})
+	logger.InitializeGoI2PLogger()
+	log = GetSAM3Logger()
 }
 
 // GetSAM3Logger returns the initialized logger
-func GetSAM3Logger() *logrus.Logger {
-	if log == nil {
-		InitializeSAM3Logger()
-	}
-	return log
+func GetSAM3Logger() *logger.Logger {
+	return logger.GetGoI2PLogger()
 }
 
 func init() {
-	InitializeSAM3Logger()
+	InitializeSAM3Logger()	
 }
