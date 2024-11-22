@@ -2,9 +2,10 @@ package sam3
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type SAMEmit struct {
@@ -51,13 +52,13 @@ func (e *SAMEmit) Create() string {
 	create := fmt.Sprintf(
 		//             //1 2 3 4 5 6 7
 		"SESSION CREATE %s%s%s%s%s%s%s \n",
-		e.I2PConfig.SessionStyle(),   //1
-		e.I2PConfig.FromPort(),       //2
-		e.I2PConfig.ToPort(),         //3
-		e.I2PConfig.ID(),             //4
-		e.I2PConfig.DestinationKey(), //5
-		e.I2PConfig.SignatureType(),  //6
-		e.OptStr(),                   //7
+		e.I2PConfig.SessionStyle(),   // 1
+		e.I2PConfig.FromPort(),       // 2
+		e.I2PConfig.ToPort(),         // 3
+		e.I2PConfig.ID(),             // 4
+		e.I2PConfig.DestinationKey(), // 5
+		e.I2PConfig.SignatureType(),  // 6
+		e.OptStr(),                   // 7
 	)
 	log.WithField("create", create).Debug("Generated SESSION CREATE command")
 	return create

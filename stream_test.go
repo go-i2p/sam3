@@ -198,8 +198,8 @@ func ExampleStreamSession() {
 	return
 
 	// Output:
-	//Sending HTTP GET /
-	//Read HTTP/HTML from idk.i2p
+	// Sending HTTP GET /
+	// Read HTTP/HTML from idk.i2p
 }
 
 func ExampleStreamListener() {
@@ -279,5 +279,5 @@ func ExampleStreamListener() {
 	<-quit // waits for client to die, for example only
 
 	// Output:
-	//Hello world!
+	// Hello world!
 }

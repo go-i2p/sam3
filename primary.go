@@ -3,12 +3,13 @@ package sam3
 import (
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
 )
@@ -81,11 +82,11 @@ func (ss *PrimarySession) Keys() i2pkeys.I2PKeys {
 func (sam *PrimarySession) Dial(network, addr string) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"network": network, "addr": addr}).Debug("Dial() called")
 	if network == "udp" || network == "udp4" || network == "udp6" {
-		//return sam.DialUDPI2P(network, network+addr[0:4], addr)
+		// return sam.DialUDPI2P(network, network+addr[0:4], addr)
 		return sam.DialUDPI2P(network, network+addr[0:4], addr)
 	}
 	if network == "tcp" || network == "tcp4" || network == "tcp6" {
-		//return sam.DialTCPI2P(network, network+addr[0:4], addr)
+		// return sam.DialTCPI2P(network, network+addr[0:4], addr)
 		return sam.DialTCPI2P(network, network+addr[0:4], addr)
 	}
 	log.WithField("network", network).Error("Invalid network type")
@@ -289,7 +290,7 @@ func (sam *PrimarySession) newGenericSubSessionWithSignatureAndPorts(style, id, 
 	}
 	text := string(buf[:n])
 	log.WithField("response", text).Debug("Received response from SAM")
-	//log.Println("SAM:", text)
+	// log.Println("SAM:", text)
 	if strings.HasPrefix(text, session_ADDOK) {
 		//if sam.keys.String() != text[len(session_ADDOK):len(text)-1] {
 		//conn.Close()
@@ -343,7 +344,7 @@ func (sam *PrimarySession) NewUniqueStreamSubSession(id string) (*StreamSession,
 	}
 	fromPort, toPort := randport(), randport()
 	log.WithFields(logrus.Fields{"fromPort": fromPort, "toPort": toPort}).Debug("Generated random ports")
-	//return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, sam.keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, randport(), randport()}, nil
+	// return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, sam.keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, randport(), randport()}, nil
 	return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, sam.keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, fromPort, toPort}, nil
 }
 

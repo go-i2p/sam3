@@ -2,11 +2,12 @@ package sam3
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
 )
@@ -54,7 +55,7 @@ type I2PConfig struct {
 	ReduceIdleQuantity        string
 	LeaseSetEncryption        string
 
-	//Streaming Library options
+	// Streaming Library options
 	AccessListType string
 	AccessList     []string
 }
@@ -264,10 +265,11 @@ func (f *I2PConfig) DoZero() string {
 	log.WithField("zeroHopSettings", r).Debug("Zero hop settings applied")
 	return r
 }
+
 func (f *I2PConfig) Print() []string {
 	lsk, lspk, lspsk := f.Leasesetsettings()
 	return []string{
-		//f.targetForPort443(),
+		// f.targetForPort443(),
 		"inbound.length=" + f.InLength,
 		"outbound.length=" + f.OutLength,
 		"inbound.lengthVariance=" + f.InVariance,
@@ -326,7 +328,7 @@ func (f *I2PConfig) LeaseSetEncryptionType() string {
 	for _, s := range strings.Split(f.LeaseSetEncryption, ",") {
 		if _, err := strconv.Atoi(s); err != nil {
 			log.WithField("invalidType", s).Panic("Invalid encrypted leaseSet type")
-			//panic("Invalid encrypted leaseSet type: " + s)
+			// panic("Invalid encrypted leaseSet type: " + s)
 		}
 	}
 	log.WithField("leaseSetEncType", f.LeaseSetEncryption).Debug("Lease set encryption type set")

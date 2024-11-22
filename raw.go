@@ -3,10 +3,11 @@ package sam3
 import (
 	"bytes"
 	"errors"
-	"github.com/sirupsen/logrus"
 	"net"
 	"strconv"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
 )

@@ -3,11 +3,12 @@ package sam3
 import (
 	"bufio"
 	"errors"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
 )

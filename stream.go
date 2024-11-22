@@ -5,11 +5,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/sirupsen/logrus"
+	"fmt"
 	"io"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
 )
@@ -212,7 +214,7 @@ func (s *StreamSession) Dial(n, addr string) (c net.Conn, err error) {
 	var i2paddr i2pkeys.I2PAddr
 	var host string
 	host, _, err = SplitHostPort(addr)
-	//log.Println("Dialing:", host)
+	// log.Println("Dialing:", host)
 	if err = IgnorePortError(err); err == nil {
 		// check for name
 		if strings.HasSuffix(host, ".b32.i2p") || strings.HasSuffix(host, ".i2p") {
@@ -222,8 +224,8 @@ func (s *StreamSession) Dial(n, addr string) (c net.Conn, err error) {
 		} else {
 			// probably a destination
 			i2paddr, err = i2pkeys.NewI2PAddrFromBytes([]byte(host))
-			//i2paddr = i2pkeys.I2PAddr(host)
-			//log.Println("Destination:", i2paddr, err)
+			// i2paddr = i2pkeys.I2PAddr(host)
+			// log.Println("Destination:", i2paddr, err)
 			log.WithFields(logrus.Fields{"host": host, "i2paddr": i2paddr}).Debug("Created I2P address from bytes")
 		}
 		if err == nil {
@@ -243,7 +245,12 @@ func (s *StreamSession) DialI2P(addr i2pkeys.I2PAddr) (*SAMConn, error) {
 		return nil, err
 	}
 	conn := sam.conn
-	_, err = conn.Write([]byte("STREAM CONNECT ID=" + s.id + " FROM_PORT=" + s.from + " TO_PORT=" + s.to + " DESTINATION=" + addr.Base64() + " SILENT=false\n"))
+	cmd := fmt.Sprintf("STREAM CONNECT ID=%s DESTINATION=%s FROM_PORT=%s TO_PORT=%s SILENT=false\n",
+		s.id,
+		addr.Base64(),
+		s.from,
+		s.to)
+	_, err = conn.Write([]byte(cmd))
 	if err != nil {
 		log.WithError(err).Error("Failed to write STREAM CONNECT command")
 		conn.Close()

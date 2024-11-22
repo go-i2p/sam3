@@ -190,7 +190,7 @@ func ExamplePrimaryStreamSession() {
 		return
 	}
 	defer sam.Close()
-	conn, err := sam.Dial("tcp", "idk.i2p") //someone.Base32())
+	conn, err := sam.Dial("tcp", "idk.i2p") // someone.Base32())
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -211,8 +211,8 @@ func ExamplePrimaryStreamSession() {
 		log.Println("Read HTTP/HTML from idk.i2p")
 	}
 	// Output:
-	//Sending HTTP GET /
-	//Read HTTP/HTML from idk.i2p
+	// Sending HTTP GET /
+	// Read HTTP/HTML from idk.i2p
 }
 
 func ExamplePrimaryStreamListener() {
@@ -253,7 +253,7 @@ func ExamplePrimaryStreamListener() {
 			return
 		}
 		defer l.Close()
-		//fmt.Println("Serving on primary listener", l.Addr().String())
+		// fmt.Println("Serving on primary listener", l.Addr().String())
 		if err := http.Serve(l, &exitHandler{}); err != nil {
 			fmt.Println(err.Error())
 		}
@@ -281,7 +281,7 @@ func ExamplePrimaryStreamListener() {
 			Dial: sc.Dial,
 		},
 	}
-	//resp, err := client.Get("http://" + "idk.i2p") //ss.Addr().Base32())
+	// resp, err := client.Get("http://" + "idk.i2p") //ss.Addr().Base32())
 	resp, err := client.Get("http://" + ss.Addr().Base32())
 	if err != nil {
 		fmt.Println(err.Error())
@@ -299,8 +299,7 @@ func ExamplePrimaryStreamListener() {
 	// Got response: Hello world!
 }
 
-type exitHandler struct {
-}
+type exitHandler struct{}
 
 func (e *exitHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello world!"))

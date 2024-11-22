@@ -4,9 +4,7 @@ import (
 	logger "github.com/go-i2p/logger"
 )
 
-var (
-	log  *logger.Logger
-)
+var log *logger.Logger
 
 func InitializeSAM3Logger() {
 	logger.InitializeGoI2PLogger()
@@ -19,5 +17,5 @@ func GetSAM3Logger() *logger.Logger {
 }
 
 func init() {
-	InitializeSAM3Logger()	
+	InitializeSAM3Logger()
 }

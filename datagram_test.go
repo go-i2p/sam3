@@ -127,7 +127,7 @@ func ExampleDatagramSession() {
 
 	return
 	// Output:
-	//Got message: Hello myself!
+	// Got message: Hello myself!
 }
 
 func ExampleMiniDatagramSession() {
@@ -178,5 +178,5 @@ func ExampleMiniDatagramSession() {
 
 	return
 	// Output:
-	//Got message: Hello myself!
+	// Got message: Hello myself!
 }

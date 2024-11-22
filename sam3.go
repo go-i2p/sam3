@@ -6,12 +6,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io"
 	"math/rand"
 	"net"
 	"os"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
 
@@ -87,7 +88,7 @@ func NewSAM(address string) (*SAM, error) {
 		log.Debug("SAM hello successful")
 		s.Config.I2PConfig.SetSAMAddress(address)
 		s.conn = conn
-		//s.Config.I2PConfig.DestinationKeys = nil
+		// s.Config.I2PConfig.DestinationKeys = nil
 		s.resolver, err = NewSAMResolver(&s)
 		if err != nil {
 			log.WithError(err).Error("Failed to create SAM resolver")
@@ -106,7 +107,7 @@ func NewSAM(address string) (*SAM, error) {
 }
 
 func (sam *SAM) Keys() (k *i2pkeys.I2PKeys) {
-	//TODO: copy them?
+	// TODO: copy them?
 	log.Debug("Retrieving SAM keys")
 	k = &sam.Config.I2PConfig.DestinationKeys
 	return
@@ -147,7 +148,7 @@ func (sam *SAM) EnsureKeyfile(fname string) (keys i2pkeys.I2PKeys, err error) {
 				sam.Config.I2PConfig.DestinationKeys = keys
 				// save keys
 				var f io.WriteCloser
-				f, err = os.OpenFile(fname, os.O_WRONLY|os.O_CREATE, 0600)
+				f, err = os.OpenFile(fname, os.O_WRONLY|os.O_CREATE, 0o600)
 				if err == nil {
 					err = i2pkeys.StoreKeysIncompat(keys, f)
 					f.Close()

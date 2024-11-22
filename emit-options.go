@@ -2,9 +2,10 @@ package sam3
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Option is a SAMEmit Option
