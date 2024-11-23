@@ -45,13 +45,13 @@ func (l *StreamListener) Close() error {
 func (l *StreamListener) Accept() (net.Conn, error) {
 	conn, err := l.AcceptI2P()
 	if err != nil {
-        // Clean up on accept failure
-        if conn != nil {
-            conn.Close()
-        }
-        return nil, err
-    }
-    return conn, nil
+		// Clean up on accept failure
+		if conn != nil {
+			conn.Close()
+		}
+		return nil, err
+	}
+	return conn, nil
 }
 
 func ExtractPairString(input, value string) string {
