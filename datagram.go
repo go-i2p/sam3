@@ -3,6 +3,7 @@ package sam3
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -24,11 +25,12 @@ type DatagramSession struct {
 	keys       i2pkeys.I2PKeys  // i2p destination keys
 	rUDPAddr   *net.UDPAddr     // the SAM bridge UDP-port
 	remoteAddr *i2pkeys.I2PAddr // optional remote I2P address
+	*DatagramOptions
 }
 
 // Creates a new datagram session. udpPort is the UDP port SAM is listening on,
 // and if you set it to zero, it will use SAMs standard UDP port.
-func (s *SAM) NewDatagramSession(id string, keys i2pkeys.I2PKeys, options []string, udpPort int) (*DatagramSession, error) {
+func (s *SAM) NewDatagramSession(id string, keys i2pkeys.I2PKeys, options []string, udpPort int, datagramOptions ...DatagramOptions) (*DatagramSession, error) {
 	log.WithFields(logrus.Fields{
 		"id":      id,
 		"udpPort": udpPort,
@@ -80,9 +82,11 @@ func (s *SAM) NewDatagramSession(id string, keys i2pkeys.I2PKeys, options []stri
 		log.WithError(err).Error("Failed to create generic session")
 		return nil, err
 	}
-
+	if len(datagramOptions) > 0 {
+		return &DatagramSession{s.address, id, conn, udpconn, keys, rUDPAddr, nil, &datagramOptions[0]}, nil
+	}
 	log.WithField("id", id).Info("DatagramSession created successfully")
-	return &DatagramSession{s.address, id, conn, udpconn, keys, rUDPAddr, nil}, nil
+	return &DatagramSession{s.address, id, conn, udpconn, keys, rUDPAddr, nil, nil}, nil
 }
 
 func (s *DatagramSession) B32() string {
@@ -198,6 +202,9 @@ func (s *DatagramSession) WriteTo(b []byte, addr net.Addr) (n int, err error) {
 		"addr":        addr,
 		"datagramLen": len(b),
 	}).Debug("Writing datagram")
+	if s.DatagramOptions != nil {
+		return s.WriteToWithOptions(b, addr.(i2pkeys.I2PAddr))
+	}
 	header := []byte("3.1 " + s.id + " " + addr.String() + "\n")
 	msg := append(header, b...)
 	n, err = s.udpconn.WriteToUDP(msg, s.rUDPAddr)
@@ -207,6 +214,35 @@ func (s *DatagramSession) WriteTo(b []byte, addr net.Addr) (n int, err error) {
 		log.WithField("bytesWritten", n).Debug("Datagram written successfully")
 	}
 	return n, err
+}
+
+type DatagramOptions struct {
+	SendTags     int
+	TagThreshold int
+	Expires      int
+	SendLeaseset bool
+}
+
+func (s *DatagramSession) WriteToWithOptions(b []byte, addr i2pkeys.I2PAddr) (n int, err error) {
+	var header bytes.Buffer
+	header.WriteString(fmt.Sprintf("3.3 %s %s", s.id, addr.String()))
+
+	if s.DatagramOptions != nil {
+		if s.DatagramOptions.SendTags > 0 {
+			header.WriteString(fmt.Sprintf(" SEND_TAGS=%d", s.DatagramOptions.SendTags))
+		}
+		if s.DatagramOptions.TagThreshold > 0 {
+			header.WriteString(fmt.Sprintf(" TAG_THRESHOLD=%d", s.DatagramOptions.TagThreshold))
+		}
+		if s.DatagramOptions.Expires > 0 {
+			header.WriteString(fmt.Sprintf(" EXPIRES=%d", s.DatagramOptions.Expires))
+		}
+		header.WriteString(fmt.Sprintf(" SEND_LEASESET=%v", s.DatagramOptions.SendLeaseset))
+	}
+
+	header.WriteString("\n")
+	msg := append(header.Bytes(), b...)
+	return s.udpconn.WriteToUDP(msg, s.rUDPAddr)
 }
 
 func (s *DatagramSession) Write(b []byte) (int, error) {

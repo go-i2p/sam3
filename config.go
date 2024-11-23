@@ -340,7 +340,7 @@ func NewConfig(opts ...func(*I2PConfig) error) (*I2PConfig, error) {
 	config.SamHost = "127.0.0.1"
 	config.SamPort = "7656"
 	config.SamMin = "3.0"
-	config.SamMax = "3.2"
+	config.SamMax = "3.3"
 	config.TunName = ""
 	config.TunType = "server"
 	config.Style = "STREAM"

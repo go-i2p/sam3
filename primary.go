@@ -372,7 +372,7 @@ func (s *PrimarySession) I2PListener(name string) (*StreamListener, error) {
 
 // Creates a new datagram session. udpPort is the UDP port SAM is listening on,
 // and if you set it to zero, it will use SAMs standard UDP port.
-func (s *PrimarySession) NewDatagramSubSession(id string, udpPort int) (*DatagramSession, error) {
+func (s *PrimarySession) NewDatagramSubSession(id string, udpPort int, datagramOptions ...DatagramOptions) (*DatagramSession, error) {
 	log.WithFields(logrus.Fields{"id": id, "udpPort": udpPort}).Debug("NewDatagramSubSession called")
 	if udpPort > 65335 || udpPort < 0 {
 		log.WithField("udpPort", udpPort).Error("Invalid UDP port")
@@ -420,9 +420,17 @@ func (s *PrimarySession) NewDatagramSubSession(id string, udpPort int) (*Datagra
 		log.WithError(err).Error("Failed to create new generic sub-session")
 		return nil, err
 	}
-
+	if len(datagramOptions) > 0 {
+		return &DatagramSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr, nil, &datagramOptions[0]}, nil
+	}
+	opts := &DatagramOptions{
+		SendTags:     0,
+		TagThreshold: 0,
+		Expires:      0,
+		SendLeaseset: false,
+	}
 	log.WithFields(logrus.Fields{"id": id, "localPort": lport}).Debug("Created new datagram sub-session")
-	return &DatagramSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr, nil}, nil
+	return &DatagramSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr, nil, opts}, nil
 }
 
 // Creates a new raw session. udpPort is the UDP port SAM is listening on,

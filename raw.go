@@ -1,7 +1,6 @@
 package sam3
 
 import (
-	"bytes"
 	"errors"
 	"net"
 	"strconv"
@@ -86,29 +85,29 @@ func (s *SAM) NewRawSession(id string, keys i2pkeys.I2PKeys, options []string, u
 	return &RawSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, keys, rUDPAddr}, nil
 }
 
-// Reads one raw datagram sent to the destination of the DatagramSession. Returns
+// Read one raw datagram sent to the destination of the DatagramSession. Returns
 // the number of bytes read. Who sent the raw message can not be determined at
 // this layer - you need to do it (in a secure way!).
 func (s *RawSession) Read(b []byte) (n int, err error) {
 	log.Debug("Attempting to read raw datagram")
-
 	for {
-		// very basic protection: only accept incomming UDP messages from the IP of the SAM bridge
 		var saddr *net.UDPAddr
 		n, saddr, err = s.udpconn.ReadFromUDP(b)
 		if err != nil {
 			log.WithError(err).Error("Failed to read from UDP")
 			return 0, err
 		}
-		if bytes.Equal(saddr.IP, s.rUDPAddr.IP) {
-			log.WithField("senderIP", saddr.IP).Debug("Received datagram from SAM bridge IP")
-			continue
-		}
-		break
-	}
 
-	log.WithField("bytesRead", n).Debug("Successfully read raw datagram")
-	return n, nil
+		// Verify source is SAM bridge
+		if saddr.IP.Equal(s.rUDPAddr.IP) && saddr.Port == s.rUDPAddr.Port {
+			log.WithField("bytesRead", n).Debug("Successfully read raw datagram")
+			return n, nil
+		}
+
+		// Log unexpected source
+		log.Printf("Ignored datagram from unauthorized source: %v", saddr)
+		continue
+	}
 }
 
 // Sends one raw datagram to the destination specified. At the time of writing,
