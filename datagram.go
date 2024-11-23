@@ -210,28 +210,75 @@ const (
 // writing, maximum size is 31 kilobyte, but this may change in the future.
 // Implements net.PacketConn.
 func (s *DatagramSession) WriteTo(b []byte, addr net.Addr) (n int, err error) {
-	log.WithFields(logrus.Fields{
-		"addr":        addr,
-		"datagramLen": len(b),
-	}).Debug("Writing datagram")
-	if len(b) > MAX_DATAGRAM_SIZE {
-		return 0, errors.New("datagram exceeds maximum size")
-	}
-	if len(b) > RECOMMENDED_SIZE {
-		log.Warning("datagram exceeds recommended size of 11KB")
-	}
-	if s.DatagramOptions != nil {
-		return s.writeToWithOptions(b, addr.(i2pkeys.I2PAddr))
-	}
-	header := []byte("3.1 " + s.id + " " + addr.String() + "\n")
-	msg := append(header, b...)
-	n, err = s.udpconn.WriteToUDP(msg, s.rUDPAddr)
-	if err != nil {
-		log.WithError(err).Error("Failed to write to UDP")
-	} else {
-		log.WithField("bytesWritten", n).Debug("Datagram written successfully")
-	}
-	return n, err
+    log.WithFields(logrus.Fields{
+        "addr":        addr,
+        "datagramLen": len(b),
+    }).Debug("Writing datagram")
+
+    if len(b) > MAX_DATAGRAM_SIZE {
+        return 0, errors.New("datagram exceeds maximum size")
+    }
+
+    // Use chunking for anything above recommended size
+    if len(b) > RECOMMENDED_SIZE {
+        return s.writeChunked(b, addr)
+    }
+
+    // Single message path
+    if s.DatagramOptions != nil {
+        return s.writeToWithOptions(b, addr.(i2pkeys.I2PAddr))
+    }
+
+    header := []byte("3.1 " + s.id + " " + addr.String() + "\n")
+    msg := append(header, b...)
+    n, err = s.udpconn.WriteToUDP(msg, s.rUDPAddr)
+    if err != nil {
+        log.WithError(err).Error("Failed to write to UDP")
+    } else {
+        log.WithField("bytesWritten", n).Debug("Datagram written successfully") 
+    }
+    return n, err
+}
+
+func (s *DatagramSession) writeChunked(b []byte, addr net.Addr) (total int, err error) {
+    chunkSize := RECOMMENDED_SIZE - 256 // Allow for header overhead
+    chunks := (len(b) + chunkSize - 1) / chunkSize
+
+    log.WithFields(logrus.Fields{
+        "totalSize": len(b),
+        "chunks":    chunks,
+    }).Debug("Splitting datagram into chunks")
+
+    for i := 0; i < chunks; i++ {
+        start := i * chunkSize
+        end := start + chunkSize
+        if end > len(b) {
+            end = len(b)
+        }
+
+        chunk := b[start:end]
+        var n int
+
+        // Single write path that handles both cases
+        if s.DatagramOptions != nil {
+            n, err = s.writeToWithOptions(chunk, addr.(i2pkeys.I2PAddr))
+        } else {
+            header := []byte("3.1 " + s.id + " " + addr.String() + "\n")
+            msg := append(header, chunk...)
+            n, err = s.udpconn.WriteToUDP(msg, s.rUDPAddr)
+        }
+
+        if err != nil {
+            return total, fmt.Errorf("chunk %d/%d failed: %w", i+1, chunks, err)
+        }
+        total += n
+
+        if i < chunks-1 {
+            time.Sleep(50 * time.Millisecond)
+        }
+    }
+
+    return total, nil
 }
 
 type DatagramOptions struct {

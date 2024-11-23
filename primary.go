@@ -225,14 +225,14 @@ func (sam *SAM) newPrimarySession(primarySessionSwitch, id string, keys i2pkeys.
 	ssesss := make(map[string]*StreamSession)
 	dsesss := make(map[string]*DatagramSession)
 	return &PrimarySession{
-		samAddr:  sam.Config.I2PConfig.Sam(),
+		samAddr:  sam.SAMEmit.I2PConfig.Sam(),
 		id:       id,
 		conn:     conn,
 		keys:     keys,
 		Timeout:  time.Duration(600 * time.Second),
 		Deadline: time.Now(),
 		sigType:  Sig_NONE,
-		Config:   sam.Config,
+		Config:   sam.SAMEmit,
 		stsess:   ssesss,
 		dgsess:   dsesss,
 		RWMutex:  sync.RWMutex{},
@@ -256,14 +256,14 @@ func (sam *SAM) NewPrimarySessionWithSignature(id string, keys i2pkeys.I2PKeys, 
 	ssesss := make(map[string]*StreamSession)
 	dsesss := make(map[string]*DatagramSession)
 	return &PrimarySession{
-		samAddr:  sam.Config.I2PConfig.Sam(),
+		samAddr:  sam.SAMEmit.I2PConfig.Sam(),
 		id:       id,
 		conn:     conn,
 		keys:     keys,
 		Timeout:  time.Duration(600 * time.Second),
 		Deadline: time.Now(),
 		sigType:  sigType,
-		Config:   sam.Config,
+		Config:   sam.SAMEmit,
 		stsess:   ssesss,
 		dgsess:   dsesss,
 		RWMutex:  sync.RWMutex{},

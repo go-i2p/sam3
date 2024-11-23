@@ -82,7 +82,7 @@ func (s *SAM) NewRawSession(id string, keys i2pkeys.I2PKeys, options []string, u
 		"remoteUDPAddr": rUDPAddr,
 	}).Debug("Created new RawSession")
 
-	return &RawSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, keys, rUDPAddr}, nil
+	return &RawSession{s.SAMEmit.I2PConfig.Sam(), id, conn, udpconn, keys, rUDPAddr}, nil
 }
 
 // Read one raw datagram sent to the destination of the DatagramSession. Returns

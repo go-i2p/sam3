@@ -26,12 +26,12 @@ func init() {
 // Used for controlling I2Ps SAMv3.
 // This implements the "Control Socket" for all connections.
 type SAM struct {
-	address  string
-	conn     net.Conn
-	resolver *SAMResolver
-	Config   SAMEmit
-	keys     *i2pkeys.I2PKeys
-	sigType  int
+	address string
+	conn    net.Conn
+	keys    *i2pkeys.I2PKeys
+	sigType int
+	SAMEmit
+	*SAMResolver
 }
 
 const (
@@ -73,24 +73,27 @@ func NewSAM(address string) (*SAM, error) {
 		log.WithError(err).Error("Failed to dial SAM address")
 		return nil, fmt.Errorf("error dialing to address '%s': %w", address, err)
 	}
-	if _, err := conn.Write(s.Config.HelloBytes()); err != nil {
+	if _, err := conn.Write(s.SAMEmit.HelloBytes()); err != nil {
 		log.WithError(err).Error("Failed to write hello message")
 		conn.Close()
 		return nil, fmt.Errorf("error writing to address '%s': %w", address, err)
 	}
-	buf := make([]byte, 256)
-	n, err := conn.Read(buf)
+	/*buf := make([]byte, 256)
+	n, err := conn.Read(buf)*/
+	reader := bufio.NewReader(conn)
+	response, err := reader.ReadString('\n')
 	if err != nil {
-		log.WithError(err).Error("Failed to read SAM response")
 		conn.Close()
-		return nil, fmt.Errorf("error reading onto buffer: %w", err)
+		return nil, fmt.Errorf("error reading SAM response: %w", err)
 	}
+	buf := []byte(response)
+	n := len(buf)
 	if strings.Contains(string(buf[:n]), "HELLO REPLY RESULT=OK") {
 		log.Debug("SAM hello successful")
-		s.Config.I2PConfig.SetSAMAddress(address)
+		s.SAMEmit.I2PConfig.SetSAMAddress(address)
 		s.conn = conn
 		// s.Config.I2PConfig.DestinationKeys = nil
-		s.resolver, err = NewSAMResolver(&s)
+		s.SAMResolver, err = NewSAMResolver(&s)
 		if err != nil {
 			log.WithError(err).Error("Failed to create SAM resolver")
 			return nil, fmt.Errorf("error creating resolver: %w", err)
@@ -110,7 +113,7 @@ func NewSAM(address string) (*SAM, error) {
 func (sam *SAM) Keys() (k *i2pkeys.I2PKeys) {
 	// TODO: copy them?
 	log.Debug("Retrieving SAM keys")
-	k = &sam.Config.I2PConfig.DestinationKeys
+	k = &sam.SAMEmit.I2PConfig.DestinationKeys
 	return
 }
 
@@ -121,7 +124,7 @@ func (sam *SAM) ReadKeys(r io.Reader) (err error) {
 	keys, err = i2pkeys.LoadKeysIncompat(r)
 	if err == nil {
 		log.Debug("Keys loaded successfully")
-		sam.Config.I2PConfig.DestinationKeys = keys
+		sam.SAMEmit.I2PConfig.DestinationKeys = keys
 	}
 	log.WithError(err).Error("Failed to load keys")
 	return
@@ -134,7 +137,7 @@ func (sam *SAM) EnsureKeyfile(fname string) (keys i2pkeys.I2PKeys, err error) {
 		// transient
 		keys, err = sam.NewKeys()
 		if err == nil {
-			sam.Config.I2PConfig.DestinationKeys = keys
+			sam.SAMEmit.I2PConfig.DestinationKeys = keys
 			log.WithFields(logrus.Fields{
 				"keys": keys,
 			}).Debug("Generated new transient keys")
@@ -146,7 +149,7 @@ func (sam *SAM) EnsureKeyfile(fname string) (keys i2pkeys.I2PKeys, err error) {
 			// make the keys
 			keys, err = sam.NewKeys()
 			if err == nil {
-				sam.Config.I2PConfig.DestinationKeys = keys
+				sam.SAMEmit.I2PConfig.DestinationKeys = keys
 				// save keys
 				var f io.WriteCloser
 				f, err = os.OpenFile(fname, os.O_WRONLY|os.O_CREATE, 0o600)
@@ -163,7 +166,7 @@ func (sam *SAM) EnsureKeyfile(fname string) (keys i2pkeys.I2PKeys, err error) {
 			if err == nil {
 				keys, err = i2pkeys.LoadKeysIncompat(f)
 				if err == nil {
-					sam.Config.I2PConfig.DestinationKeys = keys
+					sam.SAMEmit.I2PConfig.DestinationKeys = keys
 					log.Debug("Loaded existing keys from file")
 				}
 			}
@@ -227,7 +230,7 @@ func (sam *SAM) NewKeys(sigType ...string) (i2pkeys.I2PKeys, error) {
 // addresses, 3) by asking peers in the I2P network.
 func (sam *SAM) Lookup(name string) (i2pkeys.I2PAddr, error) {
 	log.WithField("name", name).Debug("Looking up address")
-	return sam.resolver.Resolve(name)
+	return sam.SAMResolver.Resolve(name)
 }
 
 // Creates a new session with the style of either "STREAM", "DATAGRAM" or "RAW",
