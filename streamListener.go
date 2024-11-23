@@ -2,11 +2,13 @@ package sam3
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -83,79 +85,93 @@ func ExtractPairInt(input, value string) int {
 func ExtractDest(input string) string {
 	log.WithField("input", input).Debug("ExtractDest called")
 	dest := strings.Split(input, " ")[0]
-	log.WithField("dest", dest).Debug("Destination extracted")
+	log.WithField("dest", dest).Debug("Destination extracted", dest)
 	return strings.Split(input, " ")[0]
 }
 
 // accept a new inbound connection
 func (l *StreamListener) AcceptI2P() (*SAMConn, error) {
-	log.Debug("StreamListener.AcceptI2P() called")
-	s, err := NewSAM(l.session.samAddr)
-	if err == nil {
-		log.Debug("Connected to SAM bridge")
-		// we connected to sam
-		// send accept() command
-		_, err = io.WriteString(s.conn, "STREAM ACCEPT ID="+l.id+" SILENT=false\n")
-		if err != nil {
-			log.WithError(err).Error("Failed to send STREAM ACCEPT command")
-			s.Close()
-			return nil, err
-		}
-		// read reply
-		rd := bufio.NewReader(s.conn)
-		// read first line
-		line, err := rd.ReadString(10)
-		if err != nil {
-			log.WithError(err).Error("Failed to read SAM bridge response")
-			s.Close()
-			return nil, err
-		}
-		log.WithField("response", line).Debug("Received SAM bridge response")
-		log.Println(line)
-		if strings.HasPrefix(line, "STREAM STATUS RESULT=OK") {
-			// we gud read destination line
-			destline, err := rd.ReadString(10)
-			if err != nil {
-				if err == io.EOF {
-					return nil, errors.New("connection closed after OK")
-				}
-				return nil, errors.New("error reading destination: " + err.Error())
-			}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-			// Validate destination format
-			dest := ExtractDest(destline)
-			if !strings.HasPrefix(dest, "DEST=") {
-				return nil, errors.New("invalid destination format")
-			}
-			if err == nil {
-				dest := ExtractDest(destline)
-				l.session.from = ExtractPairString(destline, "FROM_PORT")
-				l.session.to = ExtractPairString(destline, "TO_PORT")
-				// return wrapped connection
-				dest = strings.Trim(dest, "\n")
-				log.WithFields(logrus.Fields{
-					"dest": dest,
-					"from": l.session.from,
-					"to":   l.session.to,
-				}).Debug("Accepted new I2P connection")
-				return &SAMConn{
-					laddr: l.laddr,
-					raddr: i2pkeys.I2PAddr(dest),
-					Conn:  s.conn,
-				}, nil
-			} else {
-				log.WithError(err).Error("Failed to read destination line")
+	done := make(chan struct{})
+	var conn *SAMConn
+	var err error
+
+	go func() {
+		defer close(done)
+		log.Debug("StreamListener.AcceptI2P() called")
+		s, err := NewSAM(l.session.samAddr)
+		if err == nil {
+			log.Debug("Connected to SAM bridge")
+			// we connected to sam
+			// send accept() command
+			_, err = io.WriteString(s.conn, "STREAM ACCEPT ID="+l.id+" SILENT=false\n")
+			if err != nil {
+				log.WithError(err).Error("Failed to send STREAM ACCEPT command")
 				s.Close()
-				return nil, err
+			}
+			// read reply
+			rd := bufio.NewReader(s.conn)
+			// read first line
+			line, err := rd.ReadString(10)
+			if err != nil {
+				log.WithError(err).Error("Failed to read SAM bridge response")
+				s.Close()
+				return
+			}
+			log.WithField("response", line).Debug("Received SAM bridge response")
+			log.Println(line)
+			if strings.HasPrefix(line, "STREAM STATUS RESULT=OK") {
+				// we gud read destination line
+				destline, err := rd.ReadString(10)
+				if err != nil {
+					if err == io.EOF {
+						err = errors.New("connection closed after OK")
+					}
+					err = errors.New("error reading destination: " + err.Error())
+				}
+				if err == nil {
+					// Validate destination format
+					dest := ExtractDest(destline)
+					if !strings.HasPrefix(dest, "") {
+						err = errors.New("invalid destination format")
+					}
+					l.session.from = ExtractPairString(destline, "FROM_PORT")
+					l.session.to = ExtractPairString(destline, "TO_PORT")
+					// return wrapped connection
+					dest = strings.Trim(dest, "\n")
+					log.WithFields(logrus.Fields{
+						"dest": dest,
+						"from": l.session.from,
+						"to":   l.session.to,
+					}).Debug("Accepted new I2P connection")
+					conn = &SAMConn{
+						laddr: l.laddr,
+						raddr: i2pkeys.I2PAddr(dest),
+						Conn:  s.conn,
+					}
+					err = nil
+				} else {
+					log.WithError(err).Error("Failed to read destination line")
+					s.Close()
+					return
+				}
+			} else {
+				log.WithField("line", line).Error("Invalid SAM response")
+				s.Close()
+				err = errors.New("invalid sam line: " + line)
 			}
 		} else {
-			log.WithField("line", line).Error("Invalid SAM response")
+			log.WithError(err).Error("Failed to connect to SAM bridge")
 			s.Close()
-			return nil, errors.New("invalid sam line: " + line)
 		}
-	} else {
-		log.WithError(err).Error("Failed to connect to SAM bridge")
-		s.Close()
-		return nil, err
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-done:
+		return conn, err
 	}
 }

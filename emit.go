@@ -100,6 +100,28 @@ func (e *SAMEmit) AcceptBytes() []byte {
 	return []byte(e.Accept())
 }
 
+// Extend SAMEmit with additional command generation
+func (e *SAMEmit) GenerateSessionCmd(style string) string {
+	cmd := &strings.Builder{}
+	cmd.WriteString("SESSION CREATE ")
+	cmd.WriteString(e.I2PConfig.SessionStyle())
+
+	if e.I2PConfig.FromPort() != "" {
+		cmd.WriteString(" FROM_PORT=" + e.I2PConfig.FromPort())
+	}
+
+	if e.I2PConfig.ToPort() != "" {
+		cmd.WriteString(" TO_PORT=" + e.I2PConfig.ToPort())
+	}
+
+	cmd.WriteString(e.I2PConfig.ID())
+	cmd.WriteString(e.I2PConfig.DestinationKey())
+	cmd.WriteString(e.OptStr())
+	cmd.WriteString("\n")
+
+	return cmd.String()
+}
+
 func NewEmit(opts ...func(*SAMEmit) error) (*SAMEmit, error) {
 	var emit SAMEmit
 	for _, o := range opts {

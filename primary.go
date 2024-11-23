@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -39,6 +40,7 @@ type PrimarySession struct {
 	Config   SAMEmit
 	stsess   map[string]*StreamSession
 	dgsess   map[string]*DatagramSession
+	sync.RWMutex
 	//	from     string
 	//	to       string
 }
@@ -96,32 +98,39 @@ func (sam *PrimarySession) Dial(network, addr string) (net.Conn, error) {
 // DialTCP implements x/dialer
 func (sam *PrimarySession) DialTCP(network string, laddr, raddr net.Addr) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"network": network, "laddr": laddr, "raddr": raddr}).Debug("DialTCP() called")
+	sam.RLock()
 	ts, ok := sam.stsess[network+raddr.String()[0:4]]
-	var err error
+	sam.RUnlock()
+
 	if !ok {
-		ts, err = sam.NewUniqueStreamSubSession(network + raddr.String()[0:4])
+		sam.Lock()
+		ts, err := sam.NewUniqueStreamSubSession(network + raddr.String()[0:4])
 		if err != nil {
 			log.WithError(err).Error("Failed to create new unique stream sub-session")
+			sam.Unlock()
 			return nil, err
 		}
 		sam.stsess[network+raddr.String()[0:4]] = ts
-		ts, _ = sam.stsess[network+raddr.String()[0:4]]
+		sam.Unlock()
 	}
 	return ts.Dial(network, raddr.String())
 }
 
 func (sam *PrimarySession) DialTCPI2P(network, laddr, raddr string) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"network": network, "laddr": laddr, "raddr": raddr}).Debug("DialTCPI2P() called")
+	sam.RLock()
 	ts, ok := sam.stsess[network+raddr[0:4]]
-	var err error
+	sam.RUnlock()
 	if !ok {
-		ts, err = sam.NewUniqueStreamSubSession(network + laddr)
+		sam.Lock()
+		ts, err := sam.NewUniqueStreamSubSession(network + laddr)
 		if err != nil {
 			log.WithError(err).Error("Failed to create new unique stream sub-session")
+			sam.Unlock()
 			return nil, err
 		}
 		sam.stsess[network+raddr[0:4]] = ts
-		ts, _ = sam.stsess[network+raddr[0:4]]
+		sam.Unlock()
 	}
 	return ts.Dial(network, raddr)
 }
@@ -129,32 +138,38 @@ func (sam *PrimarySession) DialTCPI2P(network, laddr, raddr string) (net.Conn, e
 // DialUDP implements x/dialer
 func (sam *PrimarySession) DialUDP(network string, laddr, raddr net.Addr) (net.PacketConn, error) {
 	log.WithFields(logrus.Fields{"network": network, "laddr": laddr, "raddr": raddr}).Debug("DialUDP() called")
+	sam.RLock()
 	ds, ok := sam.dgsess[network+raddr.String()[0:4]]
-	var err error
+	sam.RUnlock()
 	if !ok {
-		ds, err = sam.NewDatagramSubSession(network+raddr.String()[0:4], 0)
+		sam.Lock()
+		ds, err := sam.NewDatagramSubSession(network+raddr.String()[0:4], 0)
 		if err != nil {
 			log.WithError(err).Error("Failed to create new datagram sub-session")
+			sam.Unlock()
 			return nil, err
 		}
 		sam.dgsess[network+raddr.String()[0:4]] = ds
-		ds, _ = sam.dgsess[network+raddr.String()[0:4]]
+		sam.Unlock()
 	}
 	return ds.Dial(network, raddr.String())
 }
 
 func (sam *PrimarySession) DialUDPI2P(network, laddr, raddr string) (*DatagramSession, error) {
 	log.WithFields(logrus.Fields{"network": network, "laddr": laddr, "raddr": raddr}).Debug("DialUDPI2P() called")
+	sam.RLock()
 	ds, ok := sam.dgsess[network+raddr[0:4]]
-	var err error
+	sam.RUnlock()
 	if !ok {
-		ds, err = sam.NewDatagramSubSession(network+laddr, 0)
+		sam.Lock()
+		ds, err := sam.NewDatagramSubSession(network+laddr, 0)
 		if err != nil {
 			log.WithError(err).Error("Failed to create new datagram sub-session")
+			sam.Unlock()
 			return nil, err
 		}
 		sam.dgsess[network+raddr[0:4]] = ds
-		ds, _ = sam.dgsess[network+raddr[0:4]]
+		sam.Unlock()
 	}
 	return ds.Dial(network, raddr)
 }
@@ -209,7 +224,19 @@ func (sam *SAM) newPrimarySession(primarySessionSwitch, id string, keys i2pkeys.
 	}
 	ssesss := make(map[string]*StreamSession)
 	dsesss := make(map[string]*DatagramSession)
-	return &PrimarySession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, sam.Config, ssesss, dsesss}, nil
+	return &PrimarySession{
+		samAddr:  sam.Config.I2PConfig.Sam(),
+		id:       id,
+		conn:     conn,
+		keys:     keys,
+		Timeout:  time.Duration(600 * time.Second),
+		Deadline: time.Now(),
+		sigType:  Sig_NONE,
+		Config:   sam.Config,
+		stsess:   ssesss,
+		dgsess:   dsesss,
+		RWMutex:  sync.RWMutex{},
+	}, nil
 }
 
 // Creates a new PrimarySession with the I2CP- and PRIMARYinglib options as
@@ -228,7 +255,19 @@ func (sam *SAM) NewPrimarySessionWithSignature(id string, keys i2pkeys.I2PKeys, 
 	}
 	ssesss := make(map[string]*StreamSession)
 	dsesss := make(map[string]*DatagramSession)
-	return &PrimarySession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), sigType, sam.Config, ssesss, dsesss}, nil
+	return &PrimarySession{
+		samAddr:  sam.Config.I2PConfig.Sam(),
+		id:       id,
+		conn:     conn,
+		keys:     keys,
+		Timeout:  time.Duration(600 * time.Second),
+		Deadline: time.Now(),
+		sigType:  sigType,
+		Config:   sam.Config,
+		stsess:   ssesss,
+		dgsess:   dsesss,
+		RWMutex:  sync.RWMutex{},
+	}, nil
 }
 
 // Creates a new session with the style of either "STREAM", "DATAGRAM" or "RAW",

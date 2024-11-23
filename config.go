@@ -1,16 +1,34 @@
 package sam3
 
 import (
-	"fmt"
 	"math/rand"
-	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
 )
+
+const DEFAULT_LEASESET_TYPE = "i2cp.leaseSetEncType=4"
+
+type SessionOptions struct {
+	Style         string
+	SignatureType string
+	FromPort      string
+	ToPort        string
+	Protocol      string
+	UDPPort       int
+}
+
+// Add transport options
+type TransportOptions struct {
+	UseCompression string
+	FastReceive    string
+	Reliability    string
+	IdleTimeout    time.Duration
+}
 
 // I2PConfig is a struct which manages I2P configuration options
 type I2PConfig struct {
@@ -21,11 +39,8 @@ type I2PConfig struct {
 	SamMin string
 	SamMax string
 
-	Fromport string
-	Toport   string
-
-	Style   string
-	TunType string
+	SessionOptions
+	TransportOptions
 
 	DestinationKeys i2pkeys.I2PKeys
 
@@ -45,11 +60,7 @@ type I2PConfig struct {
 	OutVariance               string
 	InBackupQuantity          string
 	OutBackupQuantity         string
-	FastRecieve               string
-	UseCompression            string
-	MessageReliability        string
 	CloseIdle                 string
-	CloseIdleTime             string
 	ReduceIdle                string
 	ReduceIdleTime            string
 	ReduceIdleQuantity        string
@@ -133,9 +144,9 @@ func (f *I2PConfig) FromPort() string {
 		log.Debug("SAM version < 3.1, FromPort not applicable")
 		return ""
 	}
-	if f.Fromport != "0" {
-		log.WithField("fromPort", f.Fromport).Debug("FromPort set")
-		return " FROM_PORT=" + f.Fromport + " "
+	if f.SessionOptions.FromPort != "0" {
+		log.WithField("fromPort", f.SessionOptions.FromPort).Debug("FromPort set")
+		return " FROM_PORT=" + f.SessionOptions.FromPort + " "
 	}
 	log.Debug("FromPort not set")
 	return ""
@@ -147,9 +158,9 @@ func (f *I2PConfig) ToPort() string {
 		log.Debug("SAM version < 3.1, ToPort not applicable")
 		return ""
 	}
-	if f.Toport != "0" {
-		log.WithField("toPort", f.Toport).Debug("ToPort set")
-		return " TO_PORT=" + f.Toport + " "
+	if f.SessionOptions.ToPort != "0" {
+		log.WithField("toPort", f.SessionOptions.ToPort).Debug("ToPort set")
+		return " TO_PORT=" + f.SessionOptions.ToPort + " "
 	}
 	log.Debug("ToPort not set")
 	return ""
@@ -157,9 +168,9 @@ func (f *I2PConfig) ToPort() string {
 
 // SessionStyle returns the session style setting in the form of "STYLE=style"
 func (f *I2PConfig) SessionStyle() string {
-	if f.Style != "" {
-		log.WithField("style", f.Style).Debug("Session style set")
-		return " STYLE=" + f.Style + " "
+	if f.SessionOptions.Style != "" {
+		log.WithField("style", f.SessionOptions.Style).Debug("Session style set")
+		return " STYLE=" + f.SessionOptions.Style + " "
 	}
 	log.Debug("Using default STREAM style")
 	return " STYLE=STREAM "
@@ -178,8 +189,8 @@ func (f *I2PConfig) samMax() float64 {
 // MinSAM returns the minimum SAM version required in major.minor form
 func (f *I2PConfig) MinSAM() string {
 	if f.SamMin == "" {
-		log.Debug("Using default MinSAM: 3.0")
-		return "3.0"
+		log.Debug("Using default MinSAM: 3.1")
+		return "3.1"
 	}
 	log.WithField("minSAM", f.SamMin).Debug("MinSAM set")
 	return f.SamMin
@@ -188,8 +199,8 @@ func (f *I2PConfig) MinSAM() string {
 // MaxSAM returns the maximum SAM version required in major.minor form
 func (f *I2PConfig) MaxSAM() string {
 	if f.SamMax == "" {
-		log.Debug("Using default MaxSAM: 3.1")
-		return "3.1"
+		log.Debug("Using default MaxSAM: 3.3")
+		return "3.3"
 	}
 	log.WithField("maxSAM", f.SamMax).Debug("MaxSAM set")
 	return f.SamMax
@@ -231,9 +242,9 @@ func (f *I2PConfig) EncryptLease() string {
 
 // Reliability returns the message reliability setting in the form of "i2cp.messageReliability=reliability"
 func (f *I2PConfig) Reliability() string {
-	if f.MessageReliability != "" {
-		log.WithField("reliability", f.MessageReliability).Debug("Message reliability set")
-		return " i2cp.messageReliability=" + f.MessageReliability + " "
+	if f.TransportOptions.Reliability != "" {
+		log.WithField("reliability", f.TransportOptions.Reliability).Debug("Message reliability set")
+		return " i2cp.messageReliability=" + f.TransportOptions.Reliability + " "
 	}
 	log.Debug("Message reliability not set")
 	return ""
@@ -258,9 +269,9 @@ func (f *I2PConfig) Close() string {
 	if f.CloseIdle == "true" {
 		log.WithFields(logrus.Fields{
 			"closeIdle":     f.CloseIdle,
-			"closeIdleTime": f.CloseIdleTime,
+			"closeIdleTime": f.TransportOptions.IdleTimeout.String(),
 		}).Debug("Close idle settings applied")
-		return "i2cp.closeOnIdle=" + f.CloseIdle + "i2cp.closeIdleTime=" + f.CloseIdleTime
+		return "i2cp.closeOnIdle=" + f.CloseIdle + "i2cp.closeIdleTime=" + f.TransportOptions.IdleTimeout.String()
 	}
 	log.Debug("Close idle settings not applied")
 	return ""
@@ -275,8 +286,8 @@ func (f *I2PConfig) DoZero() string {
 	if f.OutAllowZeroHop == "true" {
 		r += " outbound.allowZeroHop= " + f.OutAllowZeroHop + " "
 	}
-	if f.FastRecieve == "true" {
-		r += " " + f.FastRecieve + " "
+	if f.TransportOptions.FastReceive == "true" {
+		r += " " + f.TransportOptions.FastReceive + " "
 	}
 	log.WithField("zeroHopSettings", r).Debug("Zero hop settings applied")
 	return r
@@ -297,7 +308,7 @@ func (f *I2PConfig) Print() []string {
 		"outbound.quantity=" + f.OutQuantity,
 		f.DoZero(),
 		//"i2cp.fastRecieve=" + f.FastRecieve,
-		"i2cp.gzip=" + f.UseCompression,
+		"i2cp.gzip=" + f.TransportOptions.UseCompression,
 		f.Reduce(),
 		f.Close(),
 		f.Reliability(),
@@ -355,109 +366,52 @@ func (f *I2PConfig) LeaseSetEncryptionType() string {
 	return "i2cp.leaseSetEncType=" + f.LeaseSetEncryption
 }
 
-const DEFAULT_LEASESET_TYPE = "i2cp.leaseSetEncType=4"
-
 // NewConfig returns a new config with default values or updates them with functional arguments
 func NewConfig(opts ...func(*I2PConfig) error) (*I2PConfig, error) {
-	var config I2PConfig
-	config.SamHost = "127.0.0.1"
-	config.SamPort = "7656"
-	config.SamMin = "3.0"
-	config.SamMax = "3.3"
-	config.TunName = ""
-	config.TunType = "server"
-	config.Style = "STREAM"
-	config.InLength = "3"
-	config.OutLength = "3"
-	config.InQuantity = "2"
-	config.OutQuantity = "2"
-	config.InVariance = "1"
-	config.OutVariance = "1"
-	config.InBackupQuantity = "3"
-	config.OutBackupQuantity = "3"
-	config.InAllowZeroHop = "false"
-	config.OutAllowZeroHop = "false"
-	config.EncryptLeaseSet = "false"
-	config.LeaseSetKey = ""
-	config.LeaseSetPrivateKey = ""
-	config.LeaseSetPrivateSigningKey = ""
-	config.FastRecieve = "false"
-	config.UseCompression = "true"
-	config.ReduceIdle = "false"
-	config.ReduceIdleTime = "15"
-	config.ReduceIdleQuantity = "4"
-	config.CloseIdle = "false"
-	config.CloseIdleTime = "300000"
-	config.MessageReliability = "none"
-	config.LeaseSetEncryption = DEFAULT_LEASESET_TYPE
+	config := I2PConfig{
+		SamHost:                   "127.0.0.1",
+		SamPort:                   "7656",
+		SamMin:                    "3.0",
+		SamMax:                    "3.3",
+		TunName:                   "",
+		InLength:                  "3",
+		OutLength:                 "3",
+		InQuantity:                "2",
+		OutQuantity:               "2",
+		InVariance:                "1",
+		OutVariance:               "1",
+		InBackupQuantity:          "3",
+		OutBackupQuantity:         "3",
+		InAllowZeroHop:            "false",
+		OutAllowZeroHop:           "false",
+		EncryptLeaseSet:           "false",
+		LeaseSetKey:               "",
+		LeaseSetPrivateKey:        "",
+		LeaseSetPrivateSigningKey: "",
+		ReduceIdle:                "false",
+		ReduceIdleTime:            "15",
+		ReduceIdleQuantity:        "1",
+		CloseIdle:                 "false",
+		LeaseSetEncryption:        DEFAULT_LEASESET_TYPE,
+		SessionOptions: SessionOptions{
+			Style:         "STREAM",
+			SignatureType: "EdDSA_SHA512_Ed25519",
+			FromPort:      "",
+			ToPort:        "",
+			Protocol:      "",
+			UDPPort:       0,
+		},
+		TransportOptions: TransportOptions{
+			UseCompression: "true",
+			FastReceive:    "false",
+			Reliability:    "none",
+			IdleTimeout:    5 * time.Minute,
+		},
+	}
 	for _, o := range opts {
 		if err := o(&config); err != nil {
 			return nil, err
 		}
 	}
 	return &config, nil
-}
-
-// Options a map of options
-type Options map[string]string
-
-// AsList obtain sam options as list of strings
-func (opts Options) AsList() (ls []string) {
-	for k, v := range opts {
-		ls = append(ls, fmt.Sprintf("%s=%s", k, v))
-	}
-	return
-}
-
-// Config is the config type for the sam connector api for i2p which allows applications to 'speak' with i2p
-type Config struct {
-	Addr    string
-	Opts    Options
-	Session string
-	Keyfile string
-}
-
-// StreamSession create new sam connector from config with a stream session
-func (cfg *Config) StreamSession() (session *StreamSession, err error) {
-	// connect
-	var s *SAM
-	s, err = NewSAM(cfg.Addr)
-	if err == nil {
-		// ensure keys exist
-		var keys i2pkeys.I2PKeys
-		keys, err = s.EnsureKeyfile(cfg.Keyfile)
-		if err == nil {
-			// create session
-			session, err = s.NewStreamSession(cfg.Session, keys, cfg.Opts.AsList())
-		}
-	}
-	return
-}
-
-// DatagramSession create new sam datagram session from config
-func (cfg *Config) DatagramSession() (session *DatagramSession, err error) {
-	// connect
-	var s *SAM
-	s, err = NewSAM(cfg.Addr)
-	if err == nil {
-		// ensure keys exist
-		var keys i2pkeys.I2PKeys
-		keys, err = s.EnsureKeyfile(cfg.Keyfile)
-		if err == nil {
-			// determine udp port
-			var portstr string
-			_, portstr, err = net.SplitHostPort(cfg.Addr)
-			if IgnorePortError(err) == nil {
-				var port int
-				port, err = strconv.Atoi(portstr)
-				if err == nil && port > 0 {
-					// udp port is 1 lower
-					port--
-					// create session
-					session, err = s.NewDatagramSession(cfg.Session, keys, cfg.Opts.AsList(), port)
-				}
-			}
-		}
-	}
-	return
 }

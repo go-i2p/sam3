@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -235,7 +236,7 @@ func SetLeaseSetPrivateSigningKey(s string) func(*SAMEmit) error {
 // SetMessageReliability sets the host of the SAMEmit's SAM bridge
 func SetMessageReliability(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		c.I2PConfig.MessageReliability = s
+		c.I2PConfig.TransportOptions.Reliability = s
 		log.WithField("messageReliability", s).Debug("Set message reliability")
 		return nil
 	}
@@ -284,10 +285,10 @@ func SetCompress(b bool) func(*SAMEmit) error {
 func SetFastRecieve(b bool) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if b {
-			c.I2PConfig.FastRecieve = "true"
+			c.I2PConfig.TransportOptions.FastReceive = "true"
 			return nil
 		}
-		c.I2PConfig.FastRecieve = "false"
+		c.I2PConfig.TransportOptions.FastReceive = "false"
 		log.WithField("fastReceive", b).Debug("Set fast receive")
 		return nil
 	}
@@ -363,10 +364,10 @@ func SetCloseIdle(b bool) func(*SAMEmit) error {
 // SetCloseIdleTime sets the time to wait before closing tunnels to idle levels
 func SetCloseIdleTime(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		c.I2PConfig.CloseIdleTime = "300000"
+		c.I2PConfig.TransportOptions.IdleTimeout = 300000
 		if u >= 6 {
-			idleTime := strconv.Itoa((u * 60) * 1000)
-			c.I2PConfig.CloseIdleTime = idleTime
+			idleTime := (u * 60) * 1000
+			c.I2PConfig.TransportOptions.IdleTimeout = time.Duration(idleTime)
 			log.WithFields(logrus.Fields{
 				"minutes":      u,
 				"milliseconds": idleTime,
@@ -381,9 +382,9 @@ func SetCloseIdleTime(u int) func(*SAMEmit) error {
 // SetCloseIdleTimeMs sets the time to wait before closing tunnels to idle levels in milliseconds
 func SetCloseIdleTimeMs(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		c.I2PConfig.CloseIdleTime = "300000"
+		c.I2PConfig.TransportOptions.IdleTimeout = 300000
 		if u >= 300000 {
-			c.I2PConfig.CloseIdleTime = strconv.Itoa(u)
+			c.I2PConfig.TransportOptions.IdleTimeout = time.Duration(u)
 			log.WithField("closeIdleTimeMs", u).Debug("Set close idle time in milliseconds")
 			return nil
 		}

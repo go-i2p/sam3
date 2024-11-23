@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -146,8 +147,14 @@ func (s *DatagramSession) RemoteAddr() net.Addr {
 // implements net.PacketConn
 func (s *DatagramSession) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
 	log.Debug("Reading datagram")
-	// extra bytes to read the remote address of incomming datagram
-	buf := make([]byte, len(b)+4096)
+	// Use sync.Pool for buffers
+	bufPool := sync.Pool{
+		New: func() interface{} {
+			return make([]byte, len(b)+4096)
+		},
+	}
+	buf := bufPool.Get().([]byte)
+	defer bufPool.Put(buf)
 
 	for {
 		// very basic protection: only accept incomming UDP messages from the IP of the SAM bridge
