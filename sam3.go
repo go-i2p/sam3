@@ -24,6 +24,7 @@ func init() {
 }
 
 // Used for controlling I2Ps SAMv3.
+// This implements the "Control Socket" for all connections.
 type SAM struct {
 	address  string
 	conn     net.Conn
@@ -177,9 +178,15 @@ func (sam *SAM) EnsureKeyfile(fname string) (keys i2pkeys.I2PKeys, err error) {
 // Creates the I2P-equivalent of an IP address, that is unique and only the one
 // who has the private keys can send messages from. The public keys are the I2P
 // desination (the address) that anyone can send messages to.
+
+// Add constant for recommended sig type
+const (
+	DEFAULT_SIG_TYPE = "SIGNATURE_TYPE=7" // EdDSA_SHA512_Ed25519
+)
+
 func (sam *SAM) NewKeys(sigType ...string) (i2pkeys.I2PKeys, error) {
 	log.WithField("sigType", sigType).Debug("Generating new keys")
-	sigtmp := ""
+	sigtmp := DEFAULT_SIG_TYPE
 	if len(sigType) > 0 {
 		sigtmp = sigType[0]
 	}
@@ -228,12 +235,12 @@ func (sam *SAM) Lookup(name string) (i2pkeys.I2PAddr, error) {
 // I2CP/streaminglib-options as specified. Extra arguments can be specified by
 // setting extra to something else than []string{}.
 // This sam3 instance is now a session
-func (sam *SAM) newGenericSession(style, id string, keys i2pkeys.I2PKeys, options []string, extras []string) (net.Conn, error) {
+func (sam *SAM) newGenericSession(style, id string, keys i2pkeys.I2PKeys, options, extras []string) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"style": style, "id": id}).Debug("Creating new generic session")
 	return sam.newGenericSessionWithSignature(style, id, keys, Sig_NONE, options, extras)
 }
 
-func (sam *SAM) newGenericSessionWithSignature(style, id string, keys i2pkeys.I2PKeys, sigType string, options []string, extras []string) (net.Conn, error) {
+func (sam *SAM) newGenericSessionWithSignature(style, id string, keys i2pkeys.I2PKeys, sigType string, options, extras []string) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"style": style, "id": id, "sigType": sigType}).Debug("Creating new generic session with signature")
 	return sam.newGenericSessionWithSignatureAndPorts(style, id, "0", "0", keys, sigType, options, extras)
 }
@@ -243,7 +250,7 @@ func (sam *SAM) newGenericSessionWithSignature(style, id string, keys i2pkeys.I2
 // I2CP/streaminglib-options as specified. Extra arguments can be specified by
 // setting extra to something else than []string{}.
 // This sam3 instance is now a session
-func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to string, keys i2pkeys.I2PKeys, sigType string, options []string, extras []string) (net.Conn, error) {
+func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to string, keys i2pkeys.I2PKeys, sigType string, options, extras []string) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"style": style, "id": id, "from": from, "to": to, "sigType": sigType}).Debug("Creating new generic session with signature and ports")
 
 	optStr := GenerateOptionString(options)
@@ -315,8 +322,18 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 	}
 }
 
-// close this sam session
+// Close this sam session
 func (sam *SAM) Close() error {
 	log.Debug("Closing SAM session")
 	return sam.conn.Close()
+}
+
+// CloseNotify the socket with a QUIT message
+func (sam *SAM) CloseNotify() error {
+	log.Debug("Quitting SAM session")
+	_, err := sam.conn.Write([]byte("QUIT\n"))
+	if err != nil {
+		return fmt.Errorf("close notification failed: %v", err)
+	}
+	return nil
 }

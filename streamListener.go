@@ -115,6 +115,18 @@ func (l *StreamListener) AcceptI2P() (*SAMConn, error) {
 		if strings.HasPrefix(line, "STREAM STATUS RESULT=OK") {
 			// we gud read destination line
 			destline, err := rd.ReadString(10)
+			if err != nil {
+				if err == io.EOF {
+					return nil, errors.New("connection closed after OK")
+				}
+				return nil, errors.New("error reading destination: " + err.Error())
+			}
+
+			// Validate destination format
+			dest := ExtractDest(destline)
+			if !strings.HasPrefix(dest, "DEST=") {
+				return nil, errors.New("invalid destination format")
+			}
 			if err == nil {
 				dest := ExtractDest(destline)
 				l.session.from = ExtractPairString(destline, "FROM_PORT")
@@ -129,7 +141,7 @@ func (l *StreamListener) AcceptI2P() (*SAMConn, error) {
 				return &SAMConn{
 					laddr: l.laddr,
 					raddr: i2pkeys.I2PAddr(dest),
-					conn:  s.conn,
+					Conn:  s.conn,
 				}, nil
 			} else {
 				log.WithError(err).Error("Failed to read destination line")

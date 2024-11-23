@@ -110,7 +110,7 @@ func (sam *PrimarySession) DialTCP(network string, laddr, raddr net.Addr) (net.C
 	return ts.Dial(network, raddr.String())
 }
 
-func (sam *PrimarySession) DialTCPI2P(network string, laddr, raddr string) (net.Conn, error) {
+func (sam *PrimarySession) DialTCPI2P(network, laddr, raddr string) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"network": network, "laddr": laddr, "raddr": raddr}).Debug("DialTCPI2P() called")
 	ts, ok := sam.stsess[network+raddr[0:4]]
 	var err error
@@ -195,7 +195,7 @@ func (sam *SAM) NewPrimarySession(id string, keys i2pkeys.I2PKeys, options []str
 	return sam.newPrimarySession(PrimarySessionSwitch, id, keys, options)
 }
 
-func (sam *SAM) newPrimarySession(primarySessionSwitch string, id string, keys i2pkeys.I2PKeys, options []string) (*PrimarySession, error) {
+func (sam *SAM) newPrimarySession(primarySessionSwitch, id string, keys i2pkeys.I2PKeys, options []string) (*PrimarySession, error) {
 	log.WithFields(logrus.Fields{
 		"primarySessionSwitch": primarySessionSwitch,
 		"id":                   id,

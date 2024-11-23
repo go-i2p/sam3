@@ -60,6 +60,7 @@ type I2PConfig struct {
 	AccessList     []string
 }
 
+// Sam returns the SAM address in the form of "host:port"
 func (f *I2PConfig) Sam() string {
 	host := "127.0.0.1"
 	port := "7656"
@@ -76,6 +77,7 @@ func (f *I2PConfig) Sam() string {
 	return host + ":" + port
 }
 
+// SetSAMAddress sets the SAM address from a string in the form of "host:port"
 func (f *I2PConfig) SetSAMAddress(addr string) {
 	hp := strings.Split(addr, ":")
 	if len(hp) == 1 {
@@ -92,6 +94,7 @@ func (f *I2PConfig) SetSAMAddress(addr string) {
 	}).Debug("SAM address set")
 }
 
+// ID returns the tunnel name in the form of "ID=name"
 func (f *I2PConfig) ID() string {
 	if f.TunName == "" {
 		b := make([]byte, 12)
@@ -104,6 +107,7 @@ func (f *I2PConfig) ID() string {
 	return " ID=" + f.TunName + " "
 }
 
+// Leasesetsettings returns the lease set settings in the form of "i2cp.leaseSetKey=key i2cp.leaseSetPrivateKey=key i2cp.leaseSetPrivateSigningKey=key"
 func (f *I2PConfig) Leasesetsettings() (string, string, string) {
 	var r, s, t string
 	if f.LeaseSetKey != "" {
@@ -123,6 +127,7 @@ func (f *I2PConfig) Leasesetsettings() (string, string, string) {
 	return r, s, t
 }
 
+// FromPort returns the from port setting in the form of "FROM_PORT=port"
 func (f *I2PConfig) FromPort() string {
 	if f.samMax() < 3.1 {
 		log.Debug("SAM version < 3.1, FromPort not applicable")
@@ -136,6 +141,7 @@ func (f *I2PConfig) FromPort() string {
 	return ""
 }
 
+// ToPort returns the to port setting in the form of "TO_PORT=port"
 func (f *I2PConfig) ToPort() string {
 	if f.samMax() < 3.1 {
 		log.Debug("SAM version < 3.1, ToPort not applicable")
@@ -149,6 +155,7 @@ func (f *I2PConfig) ToPort() string {
 	return ""
 }
 
+// SessionStyle returns the session style setting in the form of "STYLE=style"
 func (f *I2PConfig) SessionStyle() string {
 	if f.Style != "" {
 		log.WithField("style", f.Style).Debug("Session style set")
@@ -168,6 +175,7 @@ func (f *I2PConfig) samMax() float64 {
 	return float64(i)
 }
 
+// MinSAM returns the minimum SAM version required in major.minor form
 func (f *I2PConfig) MinSAM() string {
 	if f.SamMin == "" {
 		log.Debug("Using default MinSAM: 3.0")
@@ -177,6 +185,7 @@ func (f *I2PConfig) MinSAM() string {
 	return f.SamMin
 }
 
+// MaxSAM returns the maximum SAM version required in major.minor form
 func (f *I2PConfig) MaxSAM() string {
 	if f.SamMax == "" {
 		log.Debug("Using default MaxSAM: 3.1")
@@ -186,6 +195,7 @@ func (f *I2PConfig) MaxSAM() string {
 	return f.SamMax
 }
 
+// DestinationKey returns the destination key setting in the form of "DESTINATION=key"
 func (f *I2PConfig) DestinationKey() string {
 	if &f.DestinationKeys != nil {
 		log.WithField("destinationKey", f.DestinationKeys.String()).Debug("Destination key set")
@@ -195,6 +205,7 @@ func (f *I2PConfig) DestinationKey() string {
 	return " DESTINATION=TRANSIENT "
 }
 
+// SignatureType returns the signature type setting in the form of "SIGNATURE_TYPE=type"
 func (f *I2PConfig) SignatureType() string {
 	if f.samMax() < 3.1 {
 		log.Debug("SAM version < 3.1, SignatureType not applicable")
@@ -208,6 +219,7 @@ func (f *I2PConfig) SignatureType() string {
 	return ""
 }
 
+// EncryptLease returns the lease set encryption setting in the form of "i2cp.encryptLeaseSet=true"
 func (f *I2PConfig) EncryptLease() string {
 	if f.EncryptLeaseSet == "true" {
 		log.Debug("Lease set encryption enabled")
@@ -217,6 +229,7 @@ func (f *I2PConfig) EncryptLease() string {
 	return ""
 }
 
+// Reliability returns the message reliability setting in the form of "i2cp.messageReliability=reliability"
 func (f *I2PConfig) Reliability() string {
 	if f.MessageReliability != "" {
 		log.WithField("reliability", f.MessageReliability).Debug("Message reliability set")
@@ -226,6 +239,7 @@ func (f *I2PConfig) Reliability() string {
 	return ""
 }
 
+// Reduce returns the reduce idle settings in the form of "i2cp.reduceOnIdle=true i2cp.reduceIdleTime=time i2cp.reduceQuantity=quantity"
 func (f *I2PConfig) Reduce() string {
 	if f.ReduceIdle == "true" {
 		log.WithFields(logrus.Fields{
@@ -239,6 +253,7 @@ func (f *I2PConfig) Reduce() string {
 	return ""
 }
 
+// Close returns the close idle settings in the form of "i2cp.closeOnIdle=true i2cp.closeIdleTime=time"
 func (f *I2PConfig) Close() string {
 	if f.CloseIdle == "true" {
 		log.WithFields(logrus.Fields{
@@ -251,6 +266,7 @@ func (f *I2PConfig) Close() string {
 	return ""
 }
 
+// DoZero returns the zero hop settings in the form of "inbound.allowZeroHop=true outbound.allowZeroHop=true fastRecieve=true"
 func (f *I2PConfig) DoZero() string {
 	r := ""
 	if f.InAllowZeroHop == "true" {
@@ -266,6 +282,7 @@ func (f *I2PConfig) DoZero() string {
 	return r
 }
 
+// Print returns the full config as a string
 func (f *I2PConfig) Print() []string {
 	lsk, lspk, lspsk := f.Leasesetsettings()
 	return []string{
@@ -292,6 +309,7 @@ func (f *I2PConfig) Print() []string {
 	}
 }
 
+// Accesslisttype returns the access list type
 func (f *I2PConfig) Accesslisttype() string {
 	if f.AccessListType == "whitelist" {
 		log.Debug("Access list type set to whitelist")
@@ -307,6 +325,7 @@ func (f *I2PConfig) Accesslisttype() string {
 	return ""
 }
 
+// Accesslist returns the access list in the form of "i2cp.accessList=list"
 func (f *I2PConfig) Accesslist() string {
 	if f.AccessListType != "" && len(f.AccessList) > 0 {
 		r := ""
@@ -320,6 +339,7 @@ func (f *I2PConfig) Accesslist() string {
 	return ""
 }
 
+// LeaseSetEncryptionType returns the lease set encryption type in the form of "i2cp.leaseSetEncType=type"
 func (f *I2PConfig) LeaseSetEncryptionType() string {
 	if f.LeaseSetEncryption == "" {
 		log.Debug("Using default lease set encryption type: 4,0")
@@ -335,6 +355,9 @@ func (f *I2PConfig) LeaseSetEncryptionType() string {
 	return "i2cp.leaseSetEncType=" + f.LeaseSetEncryption
 }
 
+const DEFAULT_LEASESET_TYPE = "i2cp.leaseSetEncType=4"
+
+// NewConfig returns a new config with default values or updates them with functional arguments
 func NewConfig(opts ...func(*I2PConfig) error) (*I2PConfig, error) {
 	var config I2PConfig
 	config.SamHost = "127.0.0.1"
@@ -366,6 +389,7 @@ func NewConfig(opts ...func(*I2PConfig) error) (*I2PConfig, error) {
 	config.CloseIdle = "false"
 	config.CloseIdleTime = "300000"
 	config.MessageReliability = "none"
+	config.LeaseSetEncryption = DEFAULT_LEASESET_TYPE
 	for _, o := range opts {
 		if err := o(&config); err != nil {
 			return nil, err
@@ -374,10 +398,10 @@ func NewConfig(opts ...func(*I2PConfig) error) (*I2PConfig, error) {
 	return &config, nil
 }
 
-// options map
+// Options a map of options
 type Options map[string]string
 
-// obtain sam options as list of strings
+// AsList obtain sam options as list of strings
 func (opts Options) AsList() (ls []string) {
 	for k, v := range opts {
 		ls = append(ls, fmt.Sprintf("%s=%s", k, v))
@@ -393,7 +417,7 @@ type Config struct {
 	Keyfile string
 }
 
-// create new sam connector from config with a stream session
+// StreamSession create new sam connector from config with a stream session
 func (cfg *Config) StreamSession() (session *StreamSession, err error) {
 	// connect
 	var s *SAM
@@ -410,7 +434,7 @@ func (cfg *Config) StreamSession() (session *StreamSession, err error) {
 	return
 }
 
-// create new sam datagram session from config
+// DatagramSession create new sam datagram session from config
 func (cfg *Config) DatagramSession() (session *DatagramSession, err error) {
 	// connect
 	var s *SAM

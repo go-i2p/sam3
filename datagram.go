@@ -95,7 +95,7 @@ func (s *DatagramSession) B32() string {
 	return b32
 }
 
-func (s *DatagramSession) Dial(net string, addr string) (*DatagramSession, error) {
+func (s *DatagramSession) Dial(net, addr string) (*DatagramSession, error) {
 	log.WithFields(logrus.Fields{
 		"net":  net,
 		"addr": addr,
@@ -194,6 +194,11 @@ func (s *DatagramSession) Read(b []byte) (n int, err error) {
 	return rint, rerr
 }
 
+const (
+	MAX_DATAGRAM_SIZE = 31744 // Max reliable size
+	RECOMMENDED_SIZE  = 11264 // 11KB recommended max
+)
+
 // Sends one signed datagram to the destination specified. At the time of
 // writing, maximum size is 31 kilobyte, but this may change in the future.
 // Implements net.PacketConn.
@@ -202,8 +207,14 @@ func (s *DatagramSession) WriteTo(b []byte, addr net.Addr) (n int, err error) {
 		"addr":        addr,
 		"datagramLen": len(b),
 	}).Debug("Writing datagram")
+	if len(b) > MAX_DATAGRAM_SIZE {
+		return 0, errors.New("datagram exceeds maximum size")
+	}
+	if len(b) > RECOMMENDED_SIZE {
+		log.Warning("datagram exceeds recommended size of 11KB")
+	}
 	if s.DatagramOptions != nil {
-		return s.WriteToWithOptions(b, addr.(i2pkeys.I2PAddr))
+		return s.writeToWithOptions(b, addr.(i2pkeys.I2PAddr))
 	}
 	header := []byte("3.1 " + s.id + " " + addr.String() + "\n")
 	msg := append(header, b...)
@@ -223,7 +234,7 @@ type DatagramOptions struct {
 	SendLeaseset bool
 }
 
-func (s *DatagramSession) WriteToWithOptions(b []byte, addr i2pkeys.I2PAddr) (n int, err error) {
+func (s *DatagramSession) writeToWithOptions(b []byte, addr i2pkeys.I2PAddr) (n int, err error) {
 	var header bytes.Buffer
 	header.WriteString(fmt.Sprintf("3.3 %s %s", s.id, addr.String()))
 
