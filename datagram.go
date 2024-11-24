@@ -169,7 +169,7 @@ func (s *DatagramSession) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
 		}
 		break
 	}
-	i := bytes.IndexByte(buf, byte('\n'))
+	i := bytes.IndexByte(buf, byte(' '))
 	if i > 4096 || i > n {
 		log.Error("Could not parse incoming message remote address")
 		return 0, i2pkeys.I2PAddr(""), errors.New("Could not parse incomming message remote address.")
