@@ -42,7 +42,7 @@ func Test_PrimaryStreamingDial(t *testing.T) {
 	defer ss.Close()
 	fmt.Println("\tNotice: This may fail if your I2P node is not well integrated in the I2P network.")
 	fmt.Println("\tLooking up idk.i2p")
-	forumAddr, err := earlysam.Lookup("idk.i2p")
+	forumAddr, err := ss.Lookup("idk.i2p")
 	if err != nil {
 		fmt.Println(err.Error())
 		t.Fail()
