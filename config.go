@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
+	"github.com/go-i2p/sam3/common"
 )
 
 const DEFAULT_LEASESET_TYPE = "i2cp.leaseSetEncType=4"
@@ -103,6 +104,7 @@ func (f *I2PConfig) SetSAMAddress(addr string) {
 		"host": f.SamHost,
 		"port": f.SamPort,
 	}).Debug("SAM address set")
+	i2pkeys.DefaultSAMAddress = f.Sam()
 }
 
 // ID returns the tunnel name in the form of "ID=name"
@@ -140,7 +142,7 @@ func (f *I2PConfig) Leasesetsettings() (string, string, string) {
 
 // FromPort returns the from port setting in the form of "FROM_PORT=port"
 func (f *I2PConfig) FromPort() string {
-	if f.samMax() < 3.1 {
+	if f.samMax() < common.SAM31Version.Number {
 		log.Debug("SAM version < 3.1, FromPort not applicable")
 		return ""
 	}
@@ -154,7 +156,7 @@ func (f *I2PConfig) FromPort() string {
 
 // ToPort returns the to port setting in the form of "TO_PORT=port"
 func (f *I2PConfig) ToPort() string {
-	if f.samMax() < 3.1 {
+	if f.samMax() < common.SAM31Version.Number {
 		log.Debug("SAM version < 3.1, ToPort not applicable")
 		return ""
 	}
@@ -218,7 +220,7 @@ func (f *I2PConfig) DestinationKey() string {
 
 // SignatureType returns the signature type setting in the form of "SIGNATURE_TYPE=type"
 func (f *I2PConfig) SignatureType() string {
-	if f.samMax() < 3.1 {
+	if f.samMax() < common.SAM31Version.Number {
 		log.Debug("SAM version < 3.1, SignatureType not applicable")
 		return ""
 	}
