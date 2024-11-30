@@ -232,7 +232,7 @@ func SetLeaseSetPrivateSigningKey(s string) func(*SAMEmit) error {
 // SetMessageReliability sets the host of the SAMEmit's SAM bridge
 func SetMessageReliability(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		c.I2PConfig.TransportOptions.Reliability = s
+		c.I2PConfig.TransportOptions.MessageReliability = s
 		log.WithField("messageReliability", s).Debug("Set message reliability")
 		return nil
 	}

@@ -55,7 +55,6 @@ func (f *TunnelOptions) OutboundBackupQuantity() string {
 	return strconv.Itoa(f.OutBackupQuantity)
 }
 
-
 // DoZero returns the zero hop settings in the form of "inbound.allowZeroHop=true outbound.allowZeroHop=true fastRecieve=true"
 func (f *TunnelOptions) DoZero() string {
 	r := ""

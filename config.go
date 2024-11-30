@@ -143,43 +143,6 @@ func (f *I2PConfig) DestinationKey() string {
 	return " DESTINATION=TRANSIENT "
 }
 
-// Reliability returns the message reliability setting in the form of "i2cp.messageReliability=reliability"
-func (f *I2PConfig) Reliability() string {
-	if f.TransportOptions.Reliability != "" {
-		log.WithField("reliability", f.TransportOptions.Reliability).Debug("Message reliability set")
-		return " i2cp.messageReliability=" + f.TransportOptions.Reliability + " "
-	}
-	log.Debug("Message reliability not set")
-	return ""
-}
-
-// Reduce returns the reduce idle settings in the form of "i2cp.reduceOnIdle=true i2cp.reduceIdleTime=time i2cp.reduceQuantity=quantity"
-func (f *I2PConfig) Reduce() string {
-	if f.ReduceIdle {
-		log.WithFields(logrus.Fields{
-			"reduceIdle":         f.ReduceIdle,
-			"reduceIdleTime":     f.TransportOptions.ReduceIdleTimeout.String(),
-			"reduceIdleQuantity": f.TransportOptions.ReduceIdleQuantity,
-		}).Debug("Reduce idle settings applied")
-		return "i2cp.reduceOnIdle=" + f.ReduceOnIdle() + "i2cp.reduceIdleTime=" + f.TransportOptions.ReduceIdleTimeout.String() + "i2cp.reduceQuantity=" + f.ReduceQuantity()
-	}
-	log.Debug("Reduce idle settings not applied")
-	return ""
-}
-
-// Close returns the close idle settings in the form of "i2cp.closeOnIdle=true i2cp.closeIdleTime=time"
-func (f *I2PConfig) Close() string {
-	if f.CloseIdle {
-		log.WithFields(logrus.Fields{
-			"closeIdle":     f.CloseIdle,
-			"closeIdleTime": f.TransportOptions.CloseIdleTimeout.String(),
-		}).Debug("Close idle settings applied")
-		return "i2cp.closeOnIdle=" + f.CloseOnIdle() + "i2cp.closeIdleTime=" + f.TransportOptions.CloseIdleTimeout.String()
-	}
-	log.Debug("Close idle settings not applied")
-	return ""
-}
-
 // Print returns the full config as a string
 func (f *I2PConfig) Print() []string {
 	lsk, lspk, lspsk := f.Leasesetsettings()
@@ -275,7 +238,7 @@ func NewConfig(opts ...func(*I2PConfig) error) (*I2PConfig, error) {
 		TransportOptions: config.TransportOptions{
 			UseCompression:     "true",
 			FastReceive:        "false",
-			Reliability:        "none",
+			MessageReliability: "none",
 			CloseIdleTimeout:   5 * time.Minute,
 			ReduceIdleQuantity: 1,
 			ReduceIdle:         false,
