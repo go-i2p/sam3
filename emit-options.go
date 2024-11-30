@@ -83,7 +83,7 @@ func SetSAMPort(s string) func(*SAMEmit) error {
 // SetName sets the host of the SAMEmit's SAM bridge
 func SetName(s string) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		c.I2PConfig.TunName = s
+		c.I2PConfig.SessionOptions.NickName = s
 		log.WithField("name", s).Debug("Set tunnel name")
 		return nil
 	}
@@ -93,7 +93,7 @@ func SetName(s string) func(*SAMEmit) error {
 func SetInLength(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 7 && u >= 0 {
-			c.I2PConfig.InLength = strconv.Itoa(u)
+			c.I2PConfig.InLength = u
 			log.WithField("inLength", u).Debug("Set inbound tunnel length")
 			return nil
 		}
@@ -106,7 +106,7 @@ func SetInLength(u int) func(*SAMEmit) error {
 func SetOutLength(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 7 && u >= 0 {
-			c.I2PConfig.OutLength = strconv.Itoa(u)
+			c.I2PConfig.OutLength = u
 			log.WithField("outLength", u).Debug("Set outbound tunnel length")
 			return nil
 		}
@@ -119,7 +119,7 @@ func SetOutLength(u int) func(*SAMEmit) error {
 func SetInVariance(i int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if i < 7 && i > -7 {
-			c.I2PConfig.InVariance = strconv.Itoa(i)
+			c.I2PConfig.InVariance = i
 			log.WithField("inVariance", i).Debug("Set inbound tunnel variance")
 			return nil
 		}
@@ -132,7 +132,7 @@ func SetInVariance(i int) func(*SAMEmit) error {
 func SetOutVariance(i int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if i < 7 && i > -7 {
-			c.I2PConfig.OutVariance = strconv.Itoa(i)
+			c.I2PConfig.OutVariance = i
 			log.WithField("outVariance", i).Debug("Set outbound tunnel variance")
 			return nil
 		}
@@ -145,7 +145,7 @@ func SetOutVariance(i int) func(*SAMEmit) error {
 func SetInQuantity(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u <= 16 && u > 0 {
-			c.I2PConfig.InQuantity = strconv.Itoa(u)
+			c.I2PConfig.InQuantity = u
 			log.WithField("inQuantity", u).Debug("Set inbound tunnel quantity")
 			return nil
 		}
@@ -158,7 +158,7 @@ func SetInQuantity(u int) func(*SAMEmit) error {
 func SetOutQuantity(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u <= 16 && u > 0 {
-			c.I2PConfig.OutQuantity = strconv.Itoa(u)
+			c.I2PConfig.OutQuantity = u
 			log.WithField("outQuantity", u).Debug("Set outbound tunnel quantity")
 			return nil
 		}
@@ -171,7 +171,7 @@ func SetOutQuantity(u int) func(*SAMEmit) error {
 func SetInBackups(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 6 && u >= 0 {
-			c.I2PConfig.InBackupQuantity = strconv.Itoa(u)
+			c.I2PConfig.InBackupQuantity = u
 			log.WithField("inBackups", u).Debug("Set inbound tunnel backups")
 			return nil
 		}
@@ -184,7 +184,7 @@ func SetInBackups(u int) func(*SAMEmit) error {
 func SetOutBackups(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 6 && u >= 0 {
-			c.I2PConfig.OutBackupQuantity = strconv.Itoa(u)
+			c.I2PConfig.OutBackupQuantity = u
 			log.WithField("outBackups", u).Debug("Set outbound tunnel backups")
 			return nil
 		}
@@ -196,11 +196,7 @@ func SetOutBackups(u int) func(*SAMEmit) error {
 // SetEncrypt tells the router to use an encrypted leaseset
 func SetEncrypt(b bool) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		if b {
-			c.I2PConfig.EncryptLeaseSet = "true"
-			return nil
-		}
-		c.I2PConfig.EncryptLeaseSet = "false"
+		c.I2PConfig.EncryptLeaseSet = b
 		log.WithField("encrypt", b).Debug("Set lease set encryption")
 		return nil
 	}
@@ -245,11 +241,7 @@ func SetMessageReliability(s string) func(*SAMEmit) error {
 // SetAllowZeroIn tells the tunnel to accept zero-hop peers
 func SetAllowZeroIn(b bool) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		if b {
-			c.I2PConfig.InAllowZeroHop = "true"
-			return nil
-		}
-		c.I2PConfig.InAllowZeroHop = "false"
+		c.I2PConfig.InAllowZeroHop = b
 		log.WithField("allowZeroIn", b).Debug("Set allow zero-hop inbound")
 		return nil
 	}
@@ -258,11 +250,7 @@ func SetAllowZeroIn(b bool) func(*SAMEmit) error {
 // SetAllowZeroOut tells the tunnel to accept zero-hop peers
 func SetAllowZeroOut(b bool) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		if b {
-			c.I2PConfig.OutAllowZeroHop = "true"
-			return nil
-		}
-		c.I2PConfig.OutAllowZeroHop = "false"
+		c.I2PConfig.OutAllowZeroHop = b
 		log.WithField("allowZeroOut", b).Debug("Set allow zero-hop outbound")
 		return nil
 	}
@@ -297,11 +285,7 @@ func SetFastRecieve(b bool) func(*SAMEmit) error {
 // SetReduceIdle tells the connection to reduce it's tunnels during extended idle time.
 func SetReduceIdle(b bool) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		if b {
-			c.I2PConfig.ReduceIdle = "true"
-			return nil
-		}
-		c.I2PConfig.ReduceIdle = "false"
+		c.I2PConfig.ReduceIdle = b
 		log.WithField("reduceIdle", b).Debug("Set reduce idle")
 		return nil
 	}
@@ -310,11 +294,14 @@ func SetReduceIdle(b bool) func(*SAMEmit) error {
 // SetReduceIdleTime sets the time to wait before reducing tunnels to idle levels
 func SetReduceIdleTime(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		c.I2PConfig.ReduceIdleTime = "300000"
+		c.I2PConfig.TransportOptions.ReduceIdleTimeout = 300000
 		if u >= 6 {
-			idleTime := strconv.Itoa((u * 60) * 1000)
-			c.I2PConfig.ReduceIdleTime = idleTime
-			log.WithField("reduceIdleTime", idleTime).Debug("Set reduce idle time")
+			idleTime := (u * 60) * 1000
+			c.I2PConfig.TransportOptions.ReduceIdleTimeout = time.Duration(idleTime)
+			log.WithFields(logrus.Fields{
+				"minutes":      u,
+				"milliseconds": idleTime,
+			}).Debug("Set reduce idle time")
 			return nil
 		}
 		log.WithField("minutes", u).Error("Invalid reduce idle timeout")
@@ -325,13 +312,12 @@ func SetReduceIdleTime(u int) func(*SAMEmit) error {
 // SetReduceIdleTimeMs sets the time to wait before reducing tunnels to idle levels in milliseconds
 func SetReduceIdleTimeMs(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		c.I2PConfig.ReduceIdleTime = "300000"
+		c.I2PConfig.TransportOptions.ReduceIdleTimeout = 300000
 		if u >= 300000 {
-			c.I2PConfig.ReduceIdleTime = strconv.Itoa(u)
+			c.I2PConfig.TransportOptions.ReduceIdleTimeout = time.Duration(u)
 			log.WithField("reduceIdleTimeMs", u).Debug("Set reduce idle time in milliseconds")
 			return nil
 		}
-		log.WithField("milliseconds", u).Error("Invalid reduce idle timeout")
 		return fmt.Errorf("Invalid reduce idle timeout(Measured in milliseconds) %v", u)
 	}
 }
@@ -340,7 +326,7 @@ func SetReduceIdleTimeMs(u int) func(*SAMEmit) error {
 func SetReduceIdleQuantity(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
 		if u < 5 {
-			c.I2PConfig.ReduceIdleQuantity = strconv.Itoa(u)
+			c.I2PConfig.ReduceIdleQuantity = u
 			log.WithField("reduceIdleQuantity", u).Debug("Set reduce idle quantity")
 			return nil
 		}
@@ -352,11 +338,7 @@ func SetReduceIdleQuantity(u int) func(*SAMEmit) error {
 // SetCloseIdle tells the connection to close it's tunnels during extended idle time.
 func SetCloseIdle(b bool) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		if b {
-			c.I2PConfig.CloseIdle = "true"
-			return nil
-		}
-		c.I2PConfig.CloseIdle = "false"
+		c.I2PConfig.CloseIdle = b
 		return nil
 	}
 }
@@ -364,10 +346,10 @@ func SetCloseIdle(b bool) func(*SAMEmit) error {
 // SetCloseIdleTime sets the time to wait before closing tunnels to idle levels
 func SetCloseIdleTime(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		c.I2PConfig.TransportOptions.IdleTimeout = 300000
+		c.I2PConfig.TransportOptions.CloseIdleTimeout = 300000
 		if u >= 6 {
 			idleTime := (u * 60) * 1000
-			c.I2PConfig.TransportOptions.IdleTimeout = time.Duration(idleTime)
+			c.I2PConfig.TransportOptions.CloseIdleTimeout = time.Duration(idleTime)
 			log.WithFields(logrus.Fields{
 				"minutes":      u,
 				"milliseconds": idleTime,
@@ -382,9 +364,9 @@ func SetCloseIdleTime(u int) func(*SAMEmit) error {
 // SetCloseIdleTimeMs sets the time to wait before closing tunnels to idle levels in milliseconds
 func SetCloseIdleTimeMs(u int) func(*SAMEmit) error {
 	return func(c *SAMEmit) error {
-		c.I2PConfig.TransportOptions.IdleTimeout = 300000
+		c.I2PConfig.TransportOptions.CloseIdleTimeout = 300000
 		if u >= 300000 {
-			c.I2PConfig.TransportOptions.IdleTimeout = time.Duration(u)
+			c.I2PConfig.TransportOptions.CloseIdleTimeout = time.Duration(u)
 			log.WithField("closeIdleTimeMs", u).Debug("Set close idle time in milliseconds")
 			return nil
 		}

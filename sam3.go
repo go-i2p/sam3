@@ -15,21 +15,22 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
-
-	. "github.com/go-i2p/i2pkeys"
+	"github.com/go-i2p/sam3/common"
 )
 
 func init() {
-	InitializeSAM3Logger()
+	common.InitializeSAM3Logger()
 }
 
 // Used for controlling I2Ps SAMv3.
 // This implements the "Control Socket" for all connections.
 type SAM struct {
-	address string
-	conn    net.Conn
-	keys    *i2pkeys.I2PKeys
-	sigType int
+	address   string
+	conn      net.Conn
+	keys      *i2pkeys.I2PKeys
+	sigType   int
+	formatter *common.SAMFormatter
+	version   common.Version
 	SAMEmit
 	*SAMResolver
 }
@@ -66,7 +67,11 @@ func RandString() string {
 // Creates a new controller for the I2P routers SAM bridge.
 func NewSAM(address string) (*SAM, error) {
 	log.WithField("address", address).Debug("Creating new SAM instance")
-	var s SAM
+	s := SAM{
+		address:   address,
+		version:   common.SAM31Version,
+		formatter: common.NewSAMFormatter(common.SAM31Version.String),
+	}
 	// TODO: clean this up
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
@@ -223,7 +228,7 @@ func (sam *SAM) NewKeys(sigType ...string) (i2pkeys.I2PKeys, error) {
 		}
 	}
 	log.Debug("Successfully generated new keys")
-	return NewKeys(I2PAddr(pub), priv), nil
+	return i2pkeys.NewKeys(i2pkeys.I2PAddr(pub), priv), nil
 }
 
 // Performs a lookup, probably this order: 1) routers known addresses, cached
