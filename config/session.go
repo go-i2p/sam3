@@ -71,3 +71,13 @@ func (f *SessionOptions) ToPort() string {
 	log.Debug("ToPort not set")
 	return ""
 }
+
+// SessionStyle returns the session style setting in the form of "STYLE=style"
+func (f *SessionOptions) SessionStyle() string {
+	if f.Style != "" {
+		log.WithField("style", f.Style).Debug("Session style set")
+		return " STYLE=" + f.Style + " "
+	}
+	log.Debug("Using default STREAM style")
+	return " STYLE=STREAM "
+}

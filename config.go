@@ -96,16 +96,6 @@ func (f *I2PConfig) Leasesetsettings() (string, string, string) {
 	return r, s, t
 }
 
-// SessionStyle returns the session style setting in the form of "STYLE=style"
-func (f *I2PConfig) SessionStyle() string {
-	if f.SessionOptions.Style != "" {
-		log.WithField("style", f.SessionOptions.Style).Debug("Session style set")
-		return " STYLE=" + f.SessionOptions.Style + " "
-	}
-	log.Debug("Using default STREAM style")
-	return " STYLE=STREAM "
-}
-
 // MinSAM returns the minimum SAM version required in major.minor form
 func (f *I2PConfig) MinSAM() string {
 	min, _ := f.GetVersions()
