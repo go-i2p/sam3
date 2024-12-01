@@ -16,10 +16,11 @@ import (
 
 	"github.com/go-i2p/i2pkeys"
 	"github.com/go-i2p/sam3/common"
+	logger "github.com/go-i2p/sam3/log"
 )
 
 func init() {
-	common.InitializeSAM3Logger()
+	logger.InitializeSAM3Logger()
 }
 
 // Used for controlling I2Ps SAMv3.

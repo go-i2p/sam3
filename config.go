@@ -1,6 +1,7 @@
 package sam3
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -53,9 +54,14 @@ func (f *I2PConfig) SetSAMAddress(addr string) {
 	} else if len(hp) == 2 {
 		f.SamPort = hp[1]
 		f.SamHost = hp[0]
+	} else {
+		if f.SamHost == "" {
+			f.SamHost = "127.0.0.1"
+		}
+		if f.SamPort == "" {
+			f.SamPort = "7656"
+		}
 	}
-	f.SamPort = "7656"
-	f.SamHost = "127.0.0.1"
 	log.WithFields(logrus.Fields{
 		"host": f.SamHost,
 		"port": f.SamPort,
@@ -73,27 +79,7 @@ func (f *I2PConfig) ID() string {
 		f.NickName = string(b)
 		log.WithField("NickName", f.NickName).Debug("Generated random tunnel name")
 	}
-	return " ID=" + f.NickName + " "
-}
-
-// Leasesetsettings returns the lease set settings in the form of "i2cp.leaseSetKey=key i2cp.leaseSetPrivateKey=key i2cp.leaseSetPrivateSigningKey=key"
-func (f *I2PConfig) Leasesetsettings() (string, string, string) {
-	var r, s, t string
-	if f.LeaseSetKey != "" {
-		r = " i2cp.leaseSetKey=" + f.LeaseSetKey + " "
-	}
-	if f.LeaseSetPrivateKey != "" {
-		s = " i2cp.leaseSetPrivateKey=" + f.LeaseSetPrivateKey + " "
-	}
-	if f.LeaseSetPrivateSigningKey != "" {
-		t = " i2cp.leaseSetPrivateSigningKey=" + f.LeaseSetPrivateSigningKey + " "
-	}
-	log.WithFields(logrus.Fields{
-		"leaseSetKey":               r,
-		"leaseSetPrivateKey":        s,
-		"leaseSetPrivateSigningKey": t,
-	}).Debug("Lease set settings constructed")
-	return r, s, t
+	return fmt.Sprintf(" ID=%s ", f.NickName)
 }
 
 // MinSAM returns the minimum SAM version required in major.minor form
@@ -127,7 +113,7 @@ func (f *I2PConfig) GetVersions() (min, max common.ProtocolVersion) {
 func (f *I2PConfig) DestinationKey() string {
 	if &f.DestinationKeys != nil {
 		log.WithField("destinationKey", f.DestinationKeys.String()).Debug("Destination key set")
-		return " DESTINATION=" + f.DestinationKeys.String() + " "
+		fmt.Sprintf(" DESTINATION=%s ", f.DestinationKeys.String())
 	}
 	log.Debug("Using TRANSIENT destination")
 	return " DESTINATION=TRANSIENT "
@@ -138,17 +124,19 @@ func (f *I2PConfig) Print() []string {
 	lsk, lspk, lspsk := f.Leasesetsettings()
 	return []string{
 		// f.targetForPort443(),
-		"inbound.length=" + f.InboundLength(),
-		"outbound.length=" + f.OutboundLength(),
-		"inbound.lengthVariance=" + f.InboundVariance(),
-		"outbound.lengthVariance=" + f.OutboundVariance(),
-		"inbound.backupQuantity=" + f.InboundBackupQuantity(),
-		"outbound.backupQuantity=" + f.OutboundBackupQuantity(),
-		"inbound.quantity=" + f.InboundQuantity(),
-		"outbound.quantity=" + f.OutboundQuantity(),
-		f.DoZero(),
+		f.InboundLength(),
+		f.OutboundLength(),
+		f.InboundVariance(),
+		f.OutboundVariance(),
+		f.InboundBackupQuantity(),
+		f.OutboundBackupQuantity(),
+		f.InboundQuantity(),
+		f.OutboundQuantity(),
+		f.InboundDoZero(),
+		f.OutboundDoZero(),
 		//"i2cp.fastRecieve=" + f.FastRecieve,
-		"i2cp.gzip=" + f.TransportOptions.UseCompression,
+		f.DoFastReceive(),
+		f.UsesCompression(),
 		f.Reduce(),
 		f.Close(),
 		f.Reliability(),

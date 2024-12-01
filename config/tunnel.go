@@ -1,6 +1,9 @@
 package config
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 type TunnelOptions struct {
 	InAllowZeroHop    bool
@@ -16,43 +19,53 @@ type TunnelOptions struct {
 }
 
 func (f *TunnelOptions) InboundDoZero() string {
-	return boolToStr(f.InAllowZeroHop)
+	val := boolToStr(f.InAllowZeroHop)
+	return fmt.Sprintf(" inbound.allowZeroHop=%s ", val)
 }
 
 func (f *TunnelOptions) OutboundDoZero() string {
-	return boolToStr(f.OutAllowZeroHop)
+	val := boolToStr(f.OutAllowZeroHop)
+	return fmt.Sprintf(" outbound.allowZeroHop=%s ", val)
 }
 
 func (f *TunnelOptions) InboundLength() string {
-	return strconv.Itoa(f.InLength)
+	val := strconv.Itoa(f.InLength)
+	return fmt.Sprintf(" inbound.length=%s ", val)
 }
 
 func (f *TunnelOptions) OutboundLength() string {
-	return strconv.Itoa(f.OutLength)
+	val := strconv.Itoa(f.OutLength)
+	return fmt.Sprintf(" outbound.length=%s ", val)
 }
 
 func (f *TunnelOptions) InboundQuantity() string {
-	return strconv.Itoa(f.InQuantity)
+	val := strconv.Itoa(f.InQuantity)
+	return fmt.Sprintf(" inbound.quantity=%s ", val)
 }
 
 func (f *TunnelOptions) OutboundQuantity() string {
-	return strconv.Itoa(f.OutQuantity)
+	val := strconv.Itoa(f.OutQuantity)
+	return fmt.Sprintf(" outbound.quantity=%s ", val)
 }
 
 func (f *TunnelOptions) InboundVariance() string {
-	return strconv.Itoa(f.InVariance)
+	val := strconv.Itoa(f.InVariance)
+	return fmt.Sprintf(" inbound.variance=%s ", val)
 }
 
 func (f *TunnelOptions) OutboundVariance() string {
-	return strconv.Itoa(f.OutVariance)
+	val := strconv.Itoa(f.OutVariance)
+	return fmt.Sprintf(" outbound.variance=%s ", val)
 }
 
 func (f *TunnelOptions) InboundBackupQuantity() string {
-	return strconv.Itoa(f.InBackupQuantity)
+	val := strconv.Itoa(f.InBackupQuantity)
+	return fmt.Sprintf(" inbound.backupQuantity=%s ", val)
 }
 
 func (f *TunnelOptions) OutboundBackupQuantity() string {
-	return strconv.Itoa(f.OutBackupQuantity)
+	val := strconv.Itoa(f.OutBackupQuantity)
+	return fmt.Sprintf(" outbound.backupQuantity=%s ", val)
 }
 
 // DoZero returns the zero hop settings in the form of "inbound.allowZeroHop=true outbound.allowZeroHop=true fastRecieve=true"

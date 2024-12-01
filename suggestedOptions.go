@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-i2p/sam3/common"
+	logger "github.com/go-i2p/sam3/log"
 	"github.com/sirupsen/logrus"
 )
 
@@ -115,7 +115,7 @@ func PrimarySessionString() string {
 var PrimarySessionSwitch string = PrimarySessionString()
 
 func getEnv(key, fallback string) string {
-	common.InitializeSAM3Logger()
+	logger.InitializeSAM3Logger()
 	value, ok := os.LookupEnv(key)
 	if !ok {
 		log.WithFields(logrus.Fields{

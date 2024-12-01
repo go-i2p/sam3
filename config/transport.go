@@ -40,8 +40,10 @@ func (f *TransportOptions) CloseOnIdle() string {
 
 func (f *TransportOptions) DoFastReceive() string {
 	if f.FastReceive == "true" {
-		return " " + f.FastReceive + " "
+		log.Debug("Fast receive enabled")
+		return " i2cp.fastReceive=true "
 	}
+	log.Debug("Fast receive disabled")
 	return ""
 }
 
@@ -79,5 +81,14 @@ func (f *TransportOptions) Close() string {
 		return "i2cp.closeOnIdle=" + f.CloseOnIdle() + "i2cp.closeIdleTime=" + f.CloseIdleTimeout.String()
 	}
 	log.Debug("Close idle settings not applied")
+	return ""
+}
+
+func (f *TransportOptions) UsesCompression() string {
+	if f.UseCompression == "true" {
+		log.Debug("Compression enabled")
+		return " i2cp.useCompression=true "
+	}
+	log.Debug("Compression disabled")
 	return ""
 }

@@ -1,5 +1,5 @@
 package config
 
-import "github.com/go-i2p/sam3/common"
+import logger "github.com/go-i2p/sam3/log"
 
-var log = common.GetSAM3Logger()
+var log = logger.GetSAM3Logger()

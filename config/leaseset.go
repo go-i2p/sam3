@@ -1,14 +1,15 @@
 package config
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/go-i2p/i2pkeys"
+	"github.com/sirupsen/logrus"
 )
 
 type EncryptedLeaseSetOptions struct {
-	// SigType                   string
 	EncryptLeaseSet           bool
 	LeaseSetKey               string
 	LeaseSetPrivateKey        string
@@ -40,5 +41,43 @@ func (f *EncryptedLeaseSetOptions) LeaseSetEncryptionType() string {
 		}
 	}
 	log.WithField("leaseSetEncType", f.LeaseSetEncryption).Debug("Lease set encryption type set")
-	return "i2cp.leaseSetEncType=" + f.LeaseSetEncryption
+	return fmt.Sprintf(" i2cp.leaseSetEncType=%s ", f.LeaseSetEncryption)
+}
+
+func (f *EncryptedLeaseSetOptions) leaseSetKey() string {
+	if f.LeaseSetKey != "" {
+		return fmt.Sprintf(" i2cp.leaseSetKey=%s ", f.LeaseSetKey)
+	}
+	return ""
+}
+
+func (f *EncryptedLeaseSetOptions) leaseSetPrivateKey() string {
+	if f.LeaseSetPrivateKey != "" {
+		return fmt.Sprintf(" i2cp.leaseSetPrivateKey=%s ", f.LeaseSetPrivateKey)
+	}
+	return ""
+}
+
+func (f *EncryptedLeaseSetOptions) leaseSetPrivateSigningKey() string {
+	if f.LeaseSetPrivateSigningKey != "" {
+		return fmt.Sprintf(" i2cp.leaseSetPrivateSigningKey=%s ", f.LeaseSetPrivateSigningKey)
+	}
+	return ""
+}
+
+// Leasesetsettings returns the lease set settings in the form of "i2cp.leaseSetKey=key i2cp.leaseSetPrivateKey=key i2cp.leaseSetPrivateSigningKey=key"
+func (f *EncryptedLeaseSetOptions) Leasesetsettings() (string, string, string) {
+	if f.EncryptLeaseSet {
+		var r, s, t string
+		r = f.leaseSetKey()
+		s = f.leaseSetPrivateKey()
+		t = f.leaseSetPrivateSigningKey()
+		log.WithFields(logrus.Fields{
+			"leaseSetKey":               r,
+			"leaseSetPrivateKey":        s,
+			"leaseSetPrivateSigningKey": t,
+		}).Debug("Lease set settings constructed")
+		return r, s, t
+	}
+	return "", "", ""
 }
