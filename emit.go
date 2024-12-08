@@ -48,27 +48,6 @@ func (e *SAMEmit) LookupBytes(name string) []byte {
 	return []byte(e.Lookup(name))
 }
 
-func (e *SAMEmit) Create() string {
-	create := fmt.Sprintf(
-		//             //1 2 3 4 5 6 7
-		"SESSION CREATE %s%s%s%s%s%s%s \n",
-		e.I2PConfig.SessionStyle(),   // 1
-		e.I2PConfig.FromPort(),       // 2
-		e.I2PConfig.ToPort(),         // 3
-		e.I2PConfig.ID(),             // 4
-		e.I2PConfig.DestinationKey(), // 5
-		e.I2PConfig.SignatureType(),  // 6
-		e.OptStr(),                   // 7
-	)
-	log.WithField("create", create).Debug("Generated SESSION CREATE command")
-	return create
-}
-
-func (e *SAMEmit) CreateBytes() []byte {
-	fmt.Println("sam command: " + e.Create())
-	return []byte(e.Create())
-}
-
 func (e *SAMEmit) Connect(dest string) string {
 	connect := fmt.Sprintf(
 		"STREAM CONNECT ID=%s %s %s DESTINATION=%s \n",
@@ -98,28 +77,6 @@ func (e *SAMEmit) Accept() string {
 
 func (e *SAMEmit) AcceptBytes() []byte {
 	return []byte(e.Accept())
-}
-
-// Extend SAMEmit with additional command generation
-func (e *SAMEmit) GenerateSessionCmd(style string) string {
-	cmd := &strings.Builder{}
-	cmd.WriteString("SESSION CREATE ")
-	cmd.WriteString(e.I2PConfig.SessionStyle())
-
-	if e.I2PConfig.FromPort() != "" {
-		cmd.WriteString(" FROM_PORT=" + e.I2PConfig.FromPort())
-	}
-
-	if e.I2PConfig.ToPort() != "" {
-		cmd.WriteString(" TO_PORT=" + e.I2PConfig.ToPort())
-	}
-
-	cmd.WriteString(e.I2PConfig.ID())
-	cmd.WriteString(e.I2PConfig.DestinationKey())
-	cmd.WriteString(e.OptStr())
-	cmd.WriteString("\n")
-
-	return cmd.String()
 }
 
 func NewEmit(opts ...func(*SAMEmit) error) (*SAMEmit, error) {

@@ -194,11 +194,11 @@ const (
 
 func (sam *SAM) NewKeys(sigType ...string) (i2pkeys.I2PKeys, error) {
 	log.WithField("sigType", sigType).Debug("Generating new keys")
-	sigtmp := DEFAULT_SIG_TYPE
-	if len(sigType) > 0 {
-		sigtmp = sigType[0]
+	if sigType == nil {
+		sigType = []string{DEFAULT_SIG_TYPE}
 	}
-	if _, err := sam.conn.Write([]byte("DEST GENERATE " + sigtmp + "\n")); err != nil {
+	scmsg := []byte(fmt.Sprintf("DEST GENERATE %s\n", sigType[0]))
+	if _, err := sam.conn.Write(scmsg); err != nil {
 		log.WithError(err).Error("Failed to write DEST GENERATE command")
 		return i2pkeys.I2PKeys{}, fmt.Errorf("error with writing in SAM: %w", err)
 	}
@@ -265,8 +265,11 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 
 	conn := sam.conn
 	scmsg := []byte(fmt.Sprintf("SESSION CREATE STYLE=%s FROM_PORT=%s TO_PORT=%s ID=%s DESTINATION=%s %s %s\n", style, from, to, id, keys.String(), optStr, strings.Join(extras, " ")))
+	if style == "PRIMARY" || style == "MASTER" {
+		scmsg = []byte(fmt.Sprintf("SESSION CREATE STYLE=%s ID=%s DESTINATION=%s %s %s\n", style, id, keys.String(), optStr, strings.Join(extras, " ")))
+	}
 
-	log.WithField("message", string(scmsg)).Debug("Sending SESSION CREATE message")
+	log.WithField("message", string(scmsg)).Debug("Sending SESSION CREATE message", string(scmsg))
 
 	for m, i := 0, 0; m != len(scmsg); i++ {
 		if i == 15 {
