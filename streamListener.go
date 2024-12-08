@@ -3,7 +3,7 @@ package sam3
 import (
 	"bufio"
 	"context"
-	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -106,7 +106,8 @@ func (l *StreamListener) AcceptI2P() (*SAMConn, error) {
 			log.Debug("Connected to SAM bridge")
 			// we connected to sam
 			// send accept() command
-			_, err = io.WriteString(s.conn, "STREAM ACCEPT ID="+l.id+" SILENT=false\n")
+			acceptFmt := fmt.Sprintf("STREAM ACCEPT ID=%s SILENT=false", l.id)
+			_, err = io.WriteString(s.conn, acceptFmt)
 			if err != nil {
 				log.WithError(err).Error("Failed to send STREAM ACCEPT command")
 				s.Close()
@@ -127,15 +128,15 @@ func (l *StreamListener) AcceptI2P() (*SAMConn, error) {
 				destline, err := rd.ReadString(10)
 				if err != nil {
 					if err == io.EOF {
-						err = errors.New("connection closed after OK")
+						err = fmt.Errorf("connection closed after OK")
 					}
-					err = errors.New("error reading destination: " + err.Error())
+					err = fmt.Errorf("error reading destination: %s", err.Error())
 				}
 				if err == nil {
 					// Validate destination format
 					dest := ExtractDest(destline)
 					if !strings.HasPrefix(dest, "") {
-						err = errors.New("invalid destination format")
+						err = fmt.Errorf("invalid destination format")
 					}
 					l.session.from = ExtractPairString(destline, "FROM_PORT")
 					l.session.to = ExtractPairString(destline, "TO_PORT")
@@ -160,7 +161,7 @@ func (l *StreamListener) AcceptI2P() (*SAMConn, error) {
 			} else {
 				log.WithField("line", line).Error("Invalid SAM response")
 				s.Close()
-				err = errors.New("invalid sam line: " + line)
+				err = fmt.Errorf("invalid sam line: %s", line)
 			}
 		} else {
 			log.WithError(err).Error("Failed to connect to SAM bridge")

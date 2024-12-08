@@ -314,11 +314,11 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 	} else if strings.HasPrefix(text, session_I2P_ERROR) {
 		log.WithField("error", text[len(session_I2P_ERROR):]).Error("I2P error")
 		conn.Close()
-		return nil, fmt.Errorf("I2P error " + text[len(session_I2P_ERROR):])
+		return nil, fmt.Errorf("I2P error %s", text[len(session_I2P_ERROR):])
 	} else {
 		log.WithField("reply", text).Error("Unable to parse SAMv3 reply")
 		conn.Close()
-		return nil, fmt.Errorf("Unable to parse SAMv3 reply: " + text)
+		return nil, fmt.Errorf("Unable to parse SAMv3 reply: %s", text)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/go-i2p/i2pkeys"
@@ -36,8 +37,8 @@ func NewFullSAMResolver(address string) (*SAMResolver, error) {
 // addresses, 3) by asking peers in the I2P network.
 func (sam *SAMResolver) Resolve(name string) (i2pkeys.I2PAddr, error) {
 	log.WithField("name", name).Debug("Resolving name")
-
-	if _, err := sam.conn.Write([]byte("NAMING LOOKUP NAME=" + name + "\r\n")); err != nil {
+	query := []byte(fmt.Sprintf("NAMING LOOKUP NAME=%s\n", name))
+	if _, err := sam.conn.Write(query); err != nil {
 		log.WithError(err).Error("Failed to write to SAM connection")
 		sam.Close()
 		return i2pkeys.I2PAddr(""), err
@@ -56,7 +57,6 @@ func (sam *SAMResolver) Resolve(name string) (i2pkeys.I2PAddr, error) {
 	s := bufio.NewScanner(bytes.NewReader(buf[13:n]))
 	s.Split(bufio.ScanWords)
 
-	errStr := ""
 	for s.Scan() {
 		text := s.Text()
 		log.WithField("text", text).Debug("Parsing SAM response token")
@@ -64,11 +64,11 @@ func (sam *SAMResolver) Resolve(name string) (i2pkeys.I2PAddr, error) {
 		if text == "RESULT=OK" {
 			continue
 		} else if text == "RESULT=INVALID_KEY" {
-			errStr += "Invalid key - resolver."
 			log.Error("Invalid key in resolver")
+			return i2pkeys.I2PAddr(""), fmt.Errorf("Invalid key - resolver")
 		} else if text == "RESULT=KEY_NOT_FOUND" {
-			errStr += "Unable to resolve " + name
 			log.WithField("name", name).Error("Unable to resolve name")
+			return i2pkeys.I2PAddr(""), fmt.Errorf("Unable to resolve %s", name)
 		} else if text == "NAME="+name {
 			continue
 		} else if strings.HasPrefix(text, "VALUE=") {
@@ -76,11 +76,11 @@ func (sam *SAMResolver) Resolve(name string) (i2pkeys.I2PAddr, error) {
 			log.WithField("addr", addr).Debug("Name resolved successfully")
 			return i2pkeys.I2PAddr(text[6:]), nil
 		} else if strings.HasPrefix(text, "MESSAGE=") {
-			errStr += " " + text[8:]
 			log.WithField("message", text[8:]).Warn("Received message from SAM")
+			return i2pkeys.I2PAddr(""), fmt.Errorf("Received message from SAM: %s", text[8:])
 		} else {
 			continue
 		}
 	}
-	return i2pkeys.I2PAddr(""), errors.New(errStr)
+	return i2pkeys.I2PAddr(""), fmt.Errorf("Unable to resolve %s", name)
 }

@@ -1,6 +1,7 @@
 package sam3
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -88,8 +89,7 @@ func GenerateOptionString(opts []string) string {
 		log.Debug("i2cp.leaseSetEncType already present in options")
 		return optStr
 	}
-	finalOpts := optStr + " i2cp.leaseSetEncType=4,0"
+	finalOpts := fmt.Sprintf("%s i2cp.leaseSetEncType=4,0", optStr)
 	log.WithField("finalOptions", finalOpts).Debug("Added default i2cp.leaseSetEncType to options")
 	return finalOpts
-	// return optStr + " i2cp.leaseSetEncType=4,0"
 }
