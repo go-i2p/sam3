@@ -4,7 +4,6 @@ package sam3
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -108,11 +107,11 @@ func NewSAM(address string) (*SAM, error) {
 	} else if string(buf[:n]) == "HELLO REPLY RESULT=NOVERSION\n" {
 		log.Error("SAM bridge does not support SAMv3")
 		conn.Close()
-		return nil, errors.New("That SAM bridge does not support SAMv3.")
+		return nil, fmt.Errorf("That SAM bridge does not support SAMv3.")
 	} else {
 		log.WithField("response", string(buf[:n])).Error("Unexpected SAM response")
 		conn.Close()
-		return nil, errors.New(string(buf[:n]))
+		return nil, fmt.Errorf(string(buf[:n]))
 	}
 }
 
@@ -225,7 +224,7 @@ func (sam *SAM) NewKeys(sigType ...string) (i2pkeys.I2PKeys, error) {
 			priv = text[5:]
 		} else {
 			log.Error("Failed to parse keys from SAM response")
-			return i2pkeys.I2PKeys{}, errors.New("Failed to parse keys.")
+			return i2pkeys.I2PKeys{}, fmt.Errorf("Failed to parse keys.")
 		}
 	}
 	log.Debug("Successfully generated new keys")
@@ -265,15 +264,7 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 	optStr := GenerateOptionString(options)
 
 	conn := sam.conn
-	fp := ""
-	tp := ""
-	if from != "0" {
-		fp = " FROM_PORT=" + from
-	}
-	if to != "0" {
-		tp = " TO_PORT=" + to
-	}
-	scmsg := []byte("SESSION CREATE STYLE=" + style + fp + tp + " ID=" + id + " DESTINATION=" + keys.String() + " " + optStr + strings.Join(extras, " ") + "\n")
+	scmsg := []byte(fmt.Sprintf("SESSION CREATE STYLE=%s FROM_PORT=%s TO_PORT=%s ID=%s DESTINATION=%s %s %s\n", style, from, to, id, keys.String(), optStr, strings.Join(extras, " ")))
 
 	log.WithField("message", string(scmsg)).Debug("Sending SESSION CREATE message")
 
@@ -281,7 +272,7 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 		if i == 15 {
 			log.Error("Failed to write SESSION CREATE message after 15 attempts")
 			conn.Close()
-			return nil, errors.New("writing to SAM failed")
+			return nil, fmt.Errorf("writing to SAM failed")
 		}
 		n, err := conn.Write(scmsg[m:])
 		if err != nil {
@@ -304,30 +295,30 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 		if keys.String() != text[len(session_OK):len(text)-1] {
 			log.Error("SAM created a tunnel with different keys than requested")
 			conn.Close()
-			return nil, errors.New("SAMv3 created a tunnel with keys other than the ones we asked it for")
+			return nil, fmt.Errorf("SAMv3 created a tunnel with keys other than the ones we asked it for")
 		}
 		log.Debug("Successfully created new session")
 		return conn, nil //&StreamSession{id, conn, keys, nil, sync.RWMutex{}, nil}, nil
 	} else if text == session_DUPLICATE_ID {
 		log.Error("Duplicate tunnel name")
 		conn.Close()
-		return nil, errors.New("Duplicate tunnel name")
+		return nil, fmt.Errorf("Duplicate tunnel name")
 	} else if text == session_DUPLICATE_DEST {
 		log.Error("Duplicate destination")
 		conn.Close()
-		return nil, errors.New("Duplicate destination")
+		return nil, fmt.Errorf("Duplicate destination")
 	} else if text == session_INVALID_KEY {
 		log.Error("Invalid key for SAM session")
 		conn.Close()
-		return nil, errors.New("Invalid key - SAM session")
+		return nil, fmt.Errorf("Invalid key - SAM session")
 	} else if strings.HasPrefix(text, session_I2P_ERROR) {
 		log.WithField("error", text[len(session_I2P_ERROR):]).Error("I2P error")
 		conn.Close()
-		return nil, errors.New("I2P error " + text[len(session_I2P_ERROR):])
+		return nil, fmt.Errorf("I2P error " + text[len(session_I2P_ERROR):])
 	} else {
 		log.WithField("reply", text).Error("Unable to parse SAMv3 reply")
 		conn.Close()
-		return nil, errors.New("Unable to parse SAMv3 reply: " + text)
+		return nil, fmt.Errorf("Unable to parse SAMv3 reply: " + text)
 	}
 }
 
