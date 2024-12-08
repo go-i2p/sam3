@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -51,7 +52,7 @@ func (f *TransportOptions) DoFastReceive() string {
 func (f *TransportOptions) Reliability() string {
 	if f.MessageReliability != "" {
 		log.WithField("reliability", f.MessageReliability).Debug("Message reliability set")
-		return " i2cp.messageReliability=" + f.MessageReliability + " "
+		return fmt.Sprintf(" i2cp.messageReliability=%s ", f.MessageReliability)
 	}
 	log.Debug("Message reliability not set")
 	return ""
@@ -65,7 +66,7 @@ func (f *TransportOptions) Reduce() string {
 			"reduceIdleTime":     f.ReduceIdleTimeout.String(),
 			"reduceIdleQuantity": f.ReduceIdleQuantity,
 		}).Debug("Reduce idle settings applied")
-		return "i2cp.reduceOnIdle=" + f.ReduceOnIdle() + "i2cp.reduceIdleTime=" + f.ReduceIdleTimeout.String() + "i2cp.reduceQuantity=" + f.ReduceQuantity()
+		return fmt.Sprintf(" i2cp.reduceOnIdle=%s i2cp.reduceIdleTime=%s i2cp.reduceQuantity=%d ", f.ReduceOnIdle(), f.ReduceIdleTimeout.String(), f.ReduceIdleQuantity)
 	}
 	log.Debug("Reduce idle settings not applied")
 	return ""
@@ -78,7 +79,7 @@ func (f *TransportOptions) Close() string {
 			"closeIdle":     f.CloseIdle,
 			"closeIdleTime": f.CloseIdleTimeout.String(),
 		}).Debug("Close idle settings applied")
-		return "i2cp.closeOnIdle=" + f.CloseOnIdle() + "i2cp.closeIdleTime=" + f.CloseIdleTimeout.String()
+		return fmt.Sprintf(" i2cp.closeOnIdle=%s i2cp.closeIdleTime=%s  ", f.CloseOnIdle(), f.CloseIdleTimeout.String())
 	}
 	log.Debug("Close idle settings not applied")
 	return ""

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	sam3opts "github.com/go-i2p/sam3/opts"
 )
 
 func Test_DatagramServerClient(t *testing.T) {
@@ -102,7 +104,7 @@ func ExampleDatagramSession() {
 	myself := keys.Addr()
 
 	// See the example Option_* variables.
-	dg, err := sam.NewDatagramSession("DGTUN", keys, Options_Small, 0)
+	dg, err := sam.NewDatagramSession("DGTUN", keys, sam3opts.Options_Small, 0)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -148,7 +150,7 @@ func ExampleMiniDatagramSession() {
 	myself := keys.Addr()
 
 	// See the example Option_* variables.
-	dg, err := sam.NewDatagramSession("MINIDGTUN", keys, Options_Small, 0)
+	dg, err := sam.NewDatagramSession("MINIDGTUN", keys, sam3opts.Options_Small, 0)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

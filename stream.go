@@ -297,7 +297,7 @@ func (s *StreamSession) DialI2P(addr i2pkeys.I2PAddr) (*SAMConn, error) {
 		default:
 			log.WithField("error", scanner.Text()).Error("Unknown error")
 			conn.Close()
-			return nil, errors.New("Unknown error: " + scanner.Text() + " : " + string(buf[:n]))
+			return nil, fmt.Errorf("Unknown error: %s : %s", scanner.Text(), string(buf[:n]))
 		}
 	}
 	log.Panic("Unexpected end of StreamSession.DialI2P()")

@@ -67,16 +67,3 @@ func (f *TunnelOptions) OutboundBackupQuantity() string {
 	val := strconv.Itoa(f.OutBackupQuantity)
 	return fmt.Sprintf(" outbound.backupQuantity=%s ", val)
 }
-
-// DoZero returns the zero hop settings in the form of "inbound.allowZeroHop=true outbound.allowZeroHop=true fastRecieve=true"
-func (f *TunnelOptions) DoZero() string {
-	r := ""
-	if f.InAllowZeroHop {
-		r += " inbound.allowZeroHop=" + f.InboundDoZero() + " "
-	}
-	if f.OutAllowZeroHop {
-		r += " outbound.allowZeroHop= " + f.OutboundDoZero() + " "
-	}
-	log.WithField("zeroHopSettings", r).Debug("Zero hop settings applied")
-	return r
-}

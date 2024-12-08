@@ -295,15 +295,7 @@ func (sam *PrimarySession) newGenericSubSessionWithSignatureAndPorts(style, id, 
 	log.WithFields(logrus.Fields{"style": style, "id": id, "from": from, "to": to, "extras": extras}).Debug("newGenericSubSessionWithSignatureAndPorts called")
 
 	conn := sam.conn
-	fp := ""
-	tp := ""
-	if from != "0" && from != "" {
-		fp = " FROM_PORT=" + from
-	}
-	if to != "0" && to != "" {
-		tp = " TO_PORT=" + to
-	}
-	scmsg := []byte("SESSION ADD STYLE=" + style + " ID=" + id + fp + tp + " " + strings.Join(extras, " ") + "\n")
+	scmsg := []byte(fmt.Sprintf("SESSION ADD STYLE=%s ID=%s FROM_PORT=%s TO_PORT=%s %s\n", style, id, from, to, strings.Join(extras, " ")))
 
 	log.WithField("message", string(scmsg)).Debug("Sending SESSION ADD message")
 

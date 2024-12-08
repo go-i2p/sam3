@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/go-i2p/sam3/common"
@@ -38,7 +39,7 @@ func (f *SessionOptions) SignatureType() string {
 	}
 	if f.SigType != "" {
 		log.WithField("sigType", f.SigType).Debug("Signature type set")
-		return " SIGNATURE_TYPE=" + f.SigType + " "
+		return fmt.Sprintf(" SIGNATURE_TYPE=%s ", f.SigType)
 	}
 	log.Debug("Signature type not set")
 	return ""
@@ -52,7 +53,7 @@ func (f *SessionOptions) FromPort() string {
 	}
 	if f.InFromPort != "0" {
 		log.WithField("fromPort", f.InFromPort).Debug("FromPort set")
-		return " FROM_PORT=" + f.InFromPort + " "
+		return fmt.Sprintf(" FROM_PORT=%s ", f.InFromPort)
 	}
 	log.Debug("FromPort not set")
 	return ""
@@ -66,7 +67,7 @@ func (f *SessionOptions) ToPort() string {
 	}
 	if f.OutToPort != "0" {
 		log.WithField("toPort", f.OutToPort).Debug("ToPort set")
-		return " TO_PORT=" + f.OutToPort + " "
+		return fmt.Sprintf(" TO_PORT=%s ", f.OutToPort)
 	}
 	log.Debug("ToPort not set")
 	return ""
@@ -76,7 +77,7 @@ func (f *SessionOptions) ToPort() string {
 func (f *SessionOptions) SessionStyle() string {
 	if f.Style != "" {
 		log.WithField("style", f.Style).Debug("Session style set")
-		return " STYLE=" + f.Style + " "
+		return fmt.Sprintf(" STYLE=%s ", f.Style)
 	}
 	log.Debug("Using default STREAM style")
 	return " STYLE=STREAM "

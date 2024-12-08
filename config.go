@@ -43,7 +43,7 @@ func (f *I2PConfig) Sam() string {
 		"host": host,
 		"port": port,
 	}).Debug("SAM address constructed")
-	return host + ":" + port
+	return fmt.Sprintf("%s:%s", host, port)
 }
 
 // SetSAMAddress sets the SAM address from a string in the form of "host:port"
@@ -167,12 +167,9 @@ func (f *I2PConfig) Accesslisttype() string {
 // Accesslist returns the access list in the form of "i2cp.accessList=list"
 func (f *I2PConfig) Accesslist() string {
 	if f.AccessListType != "" && len(f.AccessList) > 0 {
-		r := ""
-		for _, s := range f.AccessList {
-			r += s + ","
-		}
+		r := strings.Join(f.AccessList, ",")
 		log.WithField("accessList", r).Debug("Access list generated")
-		return "i2cp.accessList=" + strings.TrimSuffix(r, ",")
+		return fmt.Sprintf(" i2cp.accessList=%s ", r)
 	}
 	log.Debug("Access list not set")
 	return ""

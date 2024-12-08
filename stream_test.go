@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-i2p/i2pkeys"
+	sam3opts "github.com/go-i2p/sam3/opts"
 )
 
 func Test_StreamingDial(t *testing.T) {
@@ -164,7 +165,7 @@ func ExampleStreamSession() {
 		return
 	}
 	// See the example Option_* variables.
-	ss, err := sam.NewStreamSession("stream_example", keys, Options_Small)
+	ss, err := sam.NewStreamSession("stream_example", keys, sam3opts.Options_Small)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -236,7 +237,7 @@ func ExampleStreamListener() {
 			fmt.Println(err.Error())
 			return
 		}
-		cs, err := csam.NewStreamSession("client_example", keys, Options_Small)
+		cs, err := csam.NewStreamSession("client_example", keys, sam3opts.Options_Small)
 		if err != nil {
 			fmt.Println(err.Error())
 			quit <- false
@@ -259,7 +260,7 @@ func ExampleStreamListener() {
 		quit <- true
 	}(keys.Addr()) // end of client
 
-	ss, err := sam.NewStreamSession("server_example", keys, Options_Small)
+	ss, err := sam.NewStreamSession("server_example", keys, sam3opts.Options_Small)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

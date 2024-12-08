@@ -223,8 +223,7 @@ func (s *DatagramSession) WriteTo(b []byte, addr net.Addr) (n int, err error) {
 	if s.DatagramOptions != nil {
 		return s.writeToWithOptions(b, addr.(i2pkeys.I2PAddr))
 	}
-
-	header := []byte("3.1 " + s.id + " " + addr.String() + "\n")
+	header := []byte(fmt.Sprintf("3.1 %s %s\n", s.id, addr.(i2pkeys.I2PAddr).String()))
 	msg := append(header, b...)
 	n, err = s.UDPSession.Conn.WriteToUDP(msg, s.UDPSession.RemoteAddr)
 	if err != nil {
@@ -258,7 +257,7 @@ func (s *DatagramSession) writeChunked(b []byte, addr net.Addr) (total int, err 
 		if s.DatagramOptions != nil {
 			n, err = s.writeToWithOptions(chunk, addr.(i2pkeys.I2PAddr))
 		} else {
-			header := []byte("3.1 " + s.id + " " + addr.String() + "\n")
+			header := []byte(fmt.Sprintf("3.1 %s %s %d %d\n", s.id, addr.(i2pkeys.I2PAddr).String(), i, chunks))
 			msg := append(header, chunk...)
 			n, err = s.UDPSession.Conn.WriteToUDP(msg, s.UDPSession.RemoteAddr)
 		}
@@ -284,24 +283,23 @@ type DatagramOptions struct {
 }
 
 func (s *DatagramSession) writeToWithOptions(b []byte, addr i2pkeys.I2PAddr) (n int, err error) {
-	var header bytes.Buffer
-	header.WriteString(fmt.Sprintf("3.3 %s %s", s.id, addr.String()))
-
+	header := []byte(fmt.Sprintf("3.3 %s %s", s.id, addr.String()))
 	if s.DatagramOptions != nil {
 		if s.DatagramOptions.SendTags > 0 {
-			header.WriteString(fmt.Sprintf(" SEND_TAGS=%d", s.DatagramOptions.SendTags))
+			header = append(header, []byte(fmt.Sprintf(" SEND_TAGS=%d", s.DatagramOptions.SendTags))...)
 		}
 		if s.DatagramOptions.TagThreshold > 0 {
-			header.WriteString(fmt.Sprintf(" TAG_THRESHOLD=%d", s.DatagramOptions.TagThreshold))
+			header = append(header, []byte(fmt.Sprintf(" TAG_THRESHOLD=%d", s.DatagramOptions.TagThreshold))...)
 		}
 		if s.DatagramOptions.Expires > 0 {
-			header.WriteString(fmt.Sprintf(" EXPIRES=%d", s.DatagramOptions.Expires))
+			header = append(header, []byte(fmt.Sprintf(" EXPIRES=%d", s.DatagramOptions.Expires))...)
 		}
-		header.WriteString(fmt.Sprintf(" SEND_LEASESET=%v", s.DatagramOptions.SendLeaseset))
+		if s.DatagramOptions.SendLeaseset {
+			header = append(header, []byte(" SEND_LEASESET=true")...)
+		}
 	}
-
-	header.WriteString("\n")
-	msg := append(header.Bytes(), b...)
+	header = append(header, '\n')
+	msg := append(header, b...)
 	return s.UDPSession.Conn.WriteToUDP(msg, s.UDPSession.RemoteAddr)
 }
 
