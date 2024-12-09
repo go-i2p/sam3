@@ -2,85 +2,123 @@ package sam3
 
 import (
 	"bufio"
-	"bytes"
-	"errors"
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-i2p/i2pkeys"
 )
 
+// SAMResolver handles name resolution for I2P addresses
 type SAMResolver struct {
-	*SAM
+    sam *SAM
 }
 
+// ResolveResult represents the possible outcomes of name resolution
+type ResolveResult struct {
+    Address i2pkeys.I2PAddr
+    Error   error
+}
+
+const (
+    defaultTimeout = 30 * time.Second
+    samReplyPrefix = "NAMING REPLY "
+)
+
+// NewSAMResolver creates a resolver from an existing SAM instance
 func NewSAMResolver(parent *SAM) (*SAMResolver, error) {
-	log.Debug("Creating new SAMResolver from existing SAM instance")
-	var s SAMResolver
-	s.SAM = parent
-	return &s, nil
+    if parent == nil {
+        return nil, fmt.Errorf("parent SAM instance required")
+    }
+    return &SAMResolver{sam: parent}, nil
 }
 
+// NewFullSAMResolver creates a new resolver with its own SAM connection
 func NewFullSAMResolver(address string) (*SAMResolver, error) {
-	log.WithField("address", address).Debug("Creating new full SAMResolver")
-	var s SAMResolver
-	var err error
-	s.SAM, err = NewSAM(address)
-	if err != nil {
-		log.WithError(err).Error("Failed to create new SAM instance")
-		return nil, err
-	}
-	return &s, nil
+    sam, err := NewSAM(address)
+    if err != nil {
+        return nil, fmt.Errorf("creating SAM connection: %w", err)
+    }
+    return &SAMResolver{sam: sam}, nil
 }
 
-// Performs a lookup, probably this order: 1) routers known addresses, cached
-// addresses, 3) by asking peers in the I2P network.
-func (sam *SAMResolver) Resolve(name string) (i2pkeys.I2PAddr, error) {
-	log.WithField("name", name).Debug("Resolving name")
-	query := []byte(fmt.Sprintf("NAMING LOOKUP NAME=%s\n", name))
-	if _, err := sam.conn.Write(query); err != nil {
-		log.WithError(err).Error("Failed to write to SAM connection")
-		sam.Close()
-		return i2pkeys.I2PAddr(""), err
-	}
-	buf := make([]byte, 4096)
-	n, err := sam.conn.Read(buf)
-	if err != nil {
-		log.WithError(err).Error("Failed to read from SAM connection")
-		sam.Close()
-		return i2pkeys.I2PAddr(""), err
-	}
-	if n <= 13 || !strings.HasPrefix(string(buf[:n]), "NAMING REPLY ") {
-		log.Error("Failed to parse SAM response")
-		return i2pkeys.I2PAddr(""), errors.New("Failed to parse.")
-	}
-	s := bufio.NewScanner(bytes.NewReader(buf[13:n]))
-	s.Split(bufio.ScanWords)
+func (r *SAMResolver) Resolve(name string) (i2pkeys.I2PAddr, error) {
+    return r.ResolveWithContext(context.Background(), name)
+}
 
-	for s.Scan() {
-		text := s.Text()
-		log.WithField("text", text).Debug("Parsing SAM response token")
-		// log.Println("SAM3", text)
-		if text == "RESULT=OK" {
-			continue
-		} else if text == "RESULT=INVALID_KEY" {
-			log.Error("Invalid key in resolver")
-			return i2pkeys.I2PAddr(""), fmt.Errorf("Invalid key - resolver")
-		} else if text == "RESULT=KEY_NOT_FOUND" {
-			log.WithField("name", name).Error("Unable to resolve name")
-			return i2pkeys.I2PAddr(""), fmt.Errorf("Unable to resolve %s", name)
-		} else if text == "NAME="+name {
-			continue
-		} else if strings.HasPrefix(text, "VALUE=") {
-			addr := i2pkeys.I2PAddr(text[6:])
-			log.WithField("addr", addr).Debug("Name resolved successfully")
-			return i2pkeys.I2PAddr(text[6:]), nil
-		} else if strings.HasPrefix(text, "MESSAGE=") {
-			log.WithField("message", text[8:]).Warn("Received message from SAM")
-			return i2pkeys.I2PAddr(""), fmt.Errorf("Received message from SAM: %s", text[8:])
-		} else {
-			continue
-		}
-	}
-	return i2pkeys.I2PAddr(""), fmt.Errorf("Unable to resolve %s", name)
+// Resolve looks up an I2P address by name with context support
+func (r *SAMResolver) ResolveWithContext(ctx context.Context, name string) (i2pkeys.I2PAddr, error) {
+    if name == "" {
+        return "", fmt.Errorf("name cannot be empty")
+    }
+
+    // Create query
+    query := fmt.Sprintf("NAMING LOOKUP NAME=%s\n", name)
+    
+    // Set up timeout if context doesn't have one
+    if _, hasTimeout := ctx.Deadline(); !hasTimeout {
+        var cancel context.CancelFunc
+        ctx, cancel = context.WithTimeout(ctx, defaultTimeout)
+        defer cancel()
+    }
+
+    // Write query with context awareness
+    if err := r.writeWithContext(ctx, query); err != nil {
+        return "", fmt.Errorf("writing query: %w", err)
+    }
+
+    // Read and parse response
+    return r.readResponse(ctx, name)
+}
+
+func (r *SAMResolver) writeWithContext(ctx context.Context, query string) error {
+    done := make(chan error, 1)
+    
+    go func() {
+        _, err := r.sam.conn.Write([]byte(query))
+        done <- err
+    }()
+
+    select {
+    case err := <-done:
+        return err
+    case <-ctx.Done():
+        return ctx.Err()
+    }
+}
+
+func (r *SAMResolver) readResponse(ctx context.Context, name string) (i2pkeys.I2PAddr, error) {
+    reader := bufio.NewReader(r.sam.conn)
+    
+    // Read first line
+    line, err := reader.ReadString('\n')
+    if err != nil {
+        return "", fmt.Errorf("reading response: %w", err)
+    }
+
+    if !strings.HasPrefix(line, samReplyPrefix) {
+        return "", fmt.Errorf("invalid response format")
+    }
+
+    // Parse response
+    fields := strings.Fields(strings.TrimPrefix(line, samReplyPrefix))
+    for _, field := range fields {
+        switch {
+        case field == "RESULT=OK":
+            continue
+        case field == "RESULT=INVALID_KEY":
+            return "", fmt.Errorf("invalid key")
+        case field == "RESULT=KEY_NOT_FOUND":
+            return "", fmt.Errorf("name not found: %s", name)
+        case field == "NAME="+name:
+            continue
+        case strings.HasPrefix(field, "VALUE="):
+            return i2pkeys.I2PAddr(strings.TrimPrefix(field, "VALUE=")), nil
+        case strings.HasPrefix(field, "MESSAGE="):
+            return "", fmt.Errorf("SAM error: %s", strings.TrimPrefix(field, "MESSAGE="))
+        }
+    }
+
+    return "", fmt.Errorf("unable to resolve %s", name)
 }
