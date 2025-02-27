@@ -6,16 +6,15 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io"
 	"math/rand"
 	"net"
 	"os"
 	"strings"
 
-	"github.com/go-i2p/i2pkeys"
+	"github.com/sirupsen/logrus"
 
-	. "github.com/go-i2p/i2pkeys"
+	"github.com/go-i2p/i2pkeys"
 )
 
 func init() {
@@ -212,7 +211,7 @@ func (sam *SAM) NewKeys(sigType ...string) (i2pkeys.I2PKeys, error) {
 		}
 	}
 	log.Debug("Successfully generated new keys")
-	return NewKeys(I2PAddr(pub), priv), nil
+	return i2pkeys.NewKeys(i2pkeys.I2PAddr(pub), priv), nil
 }
 
 // Performs a lookup, probably this order: 1) routers known addresses, cached
@@ -316,6 +315,9 @@ func (sam *SAM) newGenericSessionWithSignatureAndPorts(style, id, from, to strin
 
 // close this sam session
 func (sam *SAM) Close() error {
-	log.Debug("Closing SAM session")
-	return sam.conn.Close()
+	if sam.conn != nil {
+		log.Debug("Closing SAM session")
+		return sam.conn.Close()
+	}
+	return nil
 }
