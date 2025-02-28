@@ -2,11 +2,12 @@ package sam3
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
 )
@@ -76,6 +77,8 @@ func (f *I2PConfig) Sam() string {
 }
 
 func (f *I2PConfig) SetSAMAddress(addr string) {
+	f.SamPort = "7656"
+	f.SamHost = "127.0.0.1"
 	hp := strings.Split(addr, ":")
 	if len(hp) == 1 {
 		f.SamHost = hp[0]
@@ -83,8 +86,6 @@ func (f *I2PConfig) SetSAMAddress(addr string) {
 		f.SamPort = hp[1]
 		f.SamHost = hp[0]
 	}
-	f.SamPort = "7656"
-	f.SamHost = "127.0.0.1"
 	log.WithFields(logrus.Fields{
 		"host": f.SamHost,
 		"port": f.SamPort,
