@@ -2,16 +2,17 @@ package sam3
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type SAMEmit struct {
 	I2PConfig
 }
 
-func (e *SAMEmit) OptStr() string {
+func (e *SAMEmit) SamOptionsString() string {
 	optStr := strings.Join(e.I2PConfig.Print(), " ")
 	log.WithField("optStr", optStr).Debug("Generated option string")
 	return optStr
@@ -57,7 +58,7 @@ func (e *SAMEmit) Create() string {
 		e.I2PConfig.ID(),             //4
 		e.I2PConfig.DestinationKey(), //5
 		e.I2PConfig.SignatureType(),  //6
-		e.OptStr(),                   //7
+		e.SamOptionsString(),         //7
 	)
 	log.WithField("create", create).Debug("Generated SESSION CREATE command")
 	return create

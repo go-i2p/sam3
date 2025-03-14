@@ -7,11 +7,6 @@ import (
 	"github.com/go-i2p/i2pkeys"
 )
 
-/*
-import (
-	. "github.com/go-i2p/i2pkeys"
-)
-*/
 // Implements net.Conn
 type SAMConn struct {
 	laddr i2pkeys.I2PAddr

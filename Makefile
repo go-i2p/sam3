@@ -24,7 +24,15 @@ copier:
 	echo 'for f in $$(ls); do scp $$f/*.deb user@192.168.99.106:~/DEBIAN_PKGS/$$f/main/; done' >> deb/copy.sh
 
 fmt:
-	find . -name '*.go' -exec gofmt -w -s {} \;
+	find . -name '*.go' -exec gofumpt -w -s -extra {} \;
 
 upload-linux:
 	github-release upload -R -u $(USER_GH) -r "$(packagename)" -t $(VERSION) -l `sha256sum ` -n "$(packagename)" -f "$(packagename)"
+
+lib: lib-static lib-shared
+
+lib-static:
+    CGO_ENABLED=1 go build -buildmode=c-archive -o ls.a ./clib
+
+lib-shared:
+    CGO_ENABLED=1 go build -buildmode=c-shared -o libsam3.so ./clib
