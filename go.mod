@@ -1,9 +1,16 @@
 module github.com/go-i2p/sam3
 
-go 1.12
+go 1.26.0
 
 require (
-	github.com/go-i2p/i2pkeys v0.0.0-20241108200332-e4f5ccdff8c4
-	github.com/sirupsen/logrus v1.9.3
-	golang.org/x/sys v0.27.0 // indirect
+	github.com/go-i2p/i2pkeys v0.33.92
+	github.com/sirupsen/logrus v1.10.2
+)
+
+require golang.org/x/sys v0.48.0 // indirect
+
+retract (
+	v0.1.59999
+	v0.1.5999
+	v0.1.599
 )
