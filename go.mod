@@ -1,6 +1,6 @@
 module github.com/go-i2p/sam3
 
-go 1.26.0
+go 1.26.3
 
 require (
 	github.com/go-i2p/i2pkeys v0.33.92
