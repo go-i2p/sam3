@@ -1,5 +1,5 @@
-github.com/go-i2p/logger v0.1.59999 h1:q09lHiTkKiObe76lN8ES3CdNHmlzAMBv5/p0kkTt8GU=
-github.com/go-i2p/logger v0.1.59999/go.mod h1:WbyfWMndgFGJZ4xIA4oXlIfwgr3iQF/cb0HqMn/YZxk=
+github.com/go-i2p/logger v0.1.60000-0.20260701134448-2648c3b0e040 h1:+a8ZBh5vNWbQE4+bSSVGtDTTMVfKV/rLVyYAaGUp8ME=
+github.com/go-i2p/logger v0.1.60000-0.20260701134448-2648c3b0e040/go.mod h1:hImCA+uIhYMZ9A6zyBezgdWJ9L5Nx+eEYCO74epGzts=
 github.com/sirupsen/logrus v1.10.2 h1:G2SED73/qrAu6YwbdxOD6peLkCBI3z7L+ykJFTXJBBo=
 github.com/sirupsen/logrus v1.10.2/go.mod h1:SLEg8TqYulVKKfIGHldVp2K2aYz2DKSVBq4g/H5bR7Q=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
