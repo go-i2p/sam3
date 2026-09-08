@@ -144,5 +144,5 @@ func ExamplePrimaryDatagramSession() {
 
 	return
 	// Output:
-	//Got message: Hello myself!
+	// Got message: Hello myself!
 }

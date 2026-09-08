@@ -3,14 +3,17 @@ package sam3
 import (
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/go-i2p/i2pkeys"
+	"github.com/go-i2p/sam3/common"
 )
 
 const (
@@ -38,6 +41,7 @@ type PrimarySession struct {
 	Config   SAMEmit
 	stsess   map[string]*StreamSession
 	dgsess   map[string]*DatagramSession
+	sync.RWMutex
 	//	from     string
 	//	to       string
 }
@@ -81,11 +85,11 @@ func (ss *PrimarySession) Keys() i2pkeys.I2PKeys {
 func (sam *PrimarySession) Dial(network, addr string) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"network": network, "addr": addr}).Debug("Dial() called")
 	if network == "udp" || network == "udp4" || network == "udp6" {
-		//return sam.DialUDPI2P(network, network+addr[0:4], addr)
+		// return sam.DialUDPI2P(network, network+addr[0:4], addr)
 		return sam.DialUDPI2P(network, network+addr[0:4], addr)
 	}
 	if network == "tcp" || network == "tcp4" || network == "tcp6" {
-		//return sam.DialTCPI2P(network, network+addr[0:4], addr)
+		// return sam.DialTCPI2P(network, network+addr[0:4], addr)
 		return sam.DialTCPI2P(network, network+addr[0:4], addr)
 	}
 	log.WithField("network", network).Error("Invalid network type")
@@ -95,32 +99,39 @@ func (sam *PrimarySession) Dial(network, addr string) (net.Conn, error) {
 // DialTCP implements x/dialer
 func (sam *PrimarySession) DialTCP(network string, laddr, raddr net.Addr) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"network": network, "laddr": laddr, "raddr": raddr}).Debug("DialTCP() called")
+	sam.RLock()
 	ts, ok := sam.stsess[network+raddr.String()[0:4]]
-	var err error
+	sam.RUnlock()
+
 	if !ok {
-		ts, err = sam.NewUniqueStreamSubSession(network + raddr.String()[0:4])
+		sam.Lock()
+		ts, err := sam.NewUniqueStreamSubSession(network + raddr.String()[0:4])
 		if err != nil {
 			log.WithError(err).Error("Failed to create new unique stream sub-session")
+			sam.Unlock()
 			return nil, err
 		}
 		sam.stsess[network+raddr.String()[0:4]] = ts
-		ts, _ = sam.stsess[network+raddr.String()[0:4]]
+		sam.Unlock()
 	}
 	return ts.Dial(network, raddr.String())
 }
 
-func (sam *PrimarySession) DialTCPI2P(network string, laddr, raddr string) (net.Conn, error) {
+func (sam *PrimarySession) DialTCPI2P(network, laddr, raddr string) (net.Conn, error) {
 	log.WithFields(logrus.Fields{"network": network, "laddr": laddr, "raddr": raddr}).Debug("DialTCPI2P() called")
+	sam.RLock()
 	ts, ok := sam.stsess[network+raddr[0:4]]
-	var err error
+	sam.RUnlock()
 	if !ok {
-		ts, err = sam.NewUniqueStreamSubSession(network + laddr)
+		sam.Lock()
+		ts, err := sam.NewUniqueStreamSubSession(network + laddr)
 		if err != nil {
 			log.WithError(err).Error("Failed to create new unique stream sub-session")
+			sam.Unlock()
 			return nil, err
 		}
 		sam.stsess[network+raddr[0:4]] = ts
-		ts, _ = sam.stsess[network+raddr[0:4]]
+		sam.Unlock()
 	}
 	return ts.Dial(network, raddr)
 }
@@ -128,32 +139,38 @@ func (sam *PrimarySession) DialTCPI2P(network string, laddr, raddr string) (net.
 // DialUDP implements x/dialer
 func (sam *PrimarySession) DialUDP(network string, laddr, raddr net.Addr) (net.PacketConn, error) {
 	log.WithFields(logrus.Fields{"network": network, "laddr": laddr, "raddr": raddr}).Debug("DialUDP() called")
+	sam.RLock()
 	ds, ok := sam.dgsess[network+raddr.String()[0:4]]
-	var err error
+	sam.RUnlock()
 	if !ok {
-		ds, err = sam.NewDatagramSubSession(network+raddr.String()[0:4], 0)
+		sam.Lock()
+		ds, err := sam.NewDatagramSubSession(network+raddr.String()[0:4], 0)
 		if err != nil {
 			log.WithError(err).Error("Failed to create new datagram sub-session")
+			sam.Unlock()
 			return nil, err
 		}
 		sam.dgsess[network+raddr.String()[0:4]] = ds
-		ds, _ = sam.dgsess[network+raddr.String()[0:4]]
+		sam.Unlock()
 	}
 	return ds.Dial(network, raddr.String())
 }
 
 func (sam *PrimarySession) DialUDPI2P(network, laddr, raddr string) (*DatagramSession, error) {
 	log.WithFields(logrus.Fields{"network": network, "laddr": laddr, "raddr": raddr}).Debug("DialUDPI2P() called")
+	sam.RLock()
 	ds, ok := sam.dgsess[network+raddr[0:4]]
-	var err error
+	sam.RUnlock()
 	if !ok {
-		ds, err = sam.NewDatagramSubSession(network+laddr, 0)
+		sam.Lock()
+		ds, err := sam.NewDatagramSubSession(network+laddr, 0)
 		if err != nil {
 			log.WithError(err).Error("Failed to create new datagram sub-session")
+			sam.Unlock()
 			return nil, err
 		}
 		sam.dgsess[network+raddr[0:4]] = ds
-		ds, _ = sam.dgsess[network+raddr[0:4]]
+		sam.Unlock()
 	}
 	return ds.Dial(network, raddr)
 }
@@ -194,7 +211,7 @@ func (sam *SAM) NewPrimarySession(id string, keys i2pkeys.I2PKeys, options []str
 	return sam.newPrimarySession(PrimarySessionSwitch, id, keys, options)
 }
 
-func (sam *SAM) newPrimarySession(primarySessionSwitch string, id string, keys i2pkeys.I2PKeys, options []string) (*PrimarySession, error) {
+func (sam *SAM) newPrimarySession(primarySessionSwitch, id string, keys i2pkeys.I2PKeys, options []string) (*PrimarySession, error) {
 	log.WithFields(logrus.Fields{
 		"primarySessionSwitch": primarySessionSwitch,
 		"id":                   id,
@@ -208,7 +225,19 @@ func (sam *SAM) newPrimarySession(primarySessionSwitch string, id string, keys i
 	}
 	ssesss := make(map[string]*StreamSession)
 	dsesss := make(map[string]*DatagramSession)
-	return &PrimarySession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, sam.Config, ssesss, dsesss}, nil
+	return &PrimarySession{
+		samAddr:  sam.SAMEmit.I2PConfig.Sam(),
+		id:       id,
+		conn:     conn,
+		keys:     keys,
+		Timeout:  time.Duration(600 * time.Second),
+		Deadline: time.Now(),
+		sigType:  Sig_NONE,
+		Config:   sam.SAMEmit,
+		stsess:   ssesss,
+		dgsess:   dsesss,
+		RWMutex:  sync.RWMutex{},
+	}, nil
 }
 
 // Creates a new PrimarySession with the I2CP- and PRIMARYinglib options as
@@ -227,7 +256,19 @@ func (sam *SAM) NewPrimarySessionWithSignature(id string, keys i2pkeys.I2PKeys, 
 	}
 	ssesss := make(map[string]*StreamSession)
 	dsesss := make(map[string]*DatagramSession)
-	return &PrimarySession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), sigType, sam.Config, ssesss, dsesss}, nil
+	return &PrimarySession{
+		samAddr:  sam.SAMEmit.I2PConfig.Sam(),
+		id:       id,
+		conn:     conn,
+		keys:     keys,
+		Timeout:  time.Duration(600 * time.Second),
+		Deadline: time.Now(),
+		sigType:  sigType,
+		Config:   sam.SAMEmit,
+		stsess:   ssesss,
+		dgsess:   dsesss,
+		RWMutex:  sync.RWMutex{},
+	}, nil
 }
 
 // Creates a new session with the style of either "STREAM", "DATAGRAM" or "RAW",
@@ -254,15 +295,7 @@ func (sam *PrimarySession) newGenericSubSessionWithSignatureAndPorts(style, id, 
 	log.WithFields(logrus.Fields{"style": style, "id": id, "from": from, "to": to, "extras": extras}).Debug("newGenericSubSessionWithSignatureAndPorts called")
 
 	conn := sam.conn
-	fp := ""
-	tp := ""
-	if from != "0" && from != "" {
-		fp = " FROM_PORT=" + from
-	}
-	if to != "0" && to != "" {
-		tp = " TO_PORT=" + to
-	}
-	scmsg := []byte("SESSION ADD STYLE=" + style + " ID=" + id + fp + tp + " " + strings.Join(extras, " ") + "\n")
+	scmsg := []byte(fmt.Sprintf("SESSION ADD STYLE=%s ID=%s FROM_PORT=%s TO_PORT=%s %s\n", style, id, from, to, strings.Join(extras, " ")))
 
 	log.WithField("message", string(scmsg)).Debug("Sending SESSION ADD message")
 
@@ -289,7 +322,7 @@ func (sam *PrimarySession) newGenericSubSessionWithSignatureAndPorts(style, id, 
 	}
 	text := string(buf[:n])
 	log.WithField("response", text).Debug("Received response from SAM")
-	//log.Println("SAM:", text)
+	// log.Println("SAM:", text)
 	if strings.HasPrefix(text, session_ADDOK) {
 		//if sam.keys.String() != text[len(session_ADDOK):len(text)-1] {
 		//conn.Close()
@@ -343,7 +376,7 @@ func (sam *PrimarySession) NewUniqueStreamSubSession(id string) (*StreamSession,
 	}
 	fromPort, toPort := randport(), randport()
 	log.WithFields(logrus.Fields{"fromPort": fromPort, "toPort": toPort}).Debug("Generated random ports")
-	//return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, sam.keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, randport(), randport()}, nil
+	// return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, sam.keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, randport(), randport()}, nil
 	return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, sam.keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, fromPort, toPort}, nil
 }
 
@@ -371,44 +404,27 @@ func (s *PrimarySession) I2PListener(name string) (*StreamListener, error) {
 
 // Creates a new datagram session. udpPort is the UDP port SAM is listening on,
 // and if you set it to zero, it will use SAMs standard UDP port.
-func (s *PrimarySession) NewDatagramSubSession(id string, udpPort int) (*DatagramSession, error) {
+func (s *PrimarySession) NewDatagramSubSession(id string, udpPort int, datagramOptions ...DatagramOptions) (*DatagramSession, error) {
 	log.WithFields(logrus.Fields{"id": id, "udpPort": udpPort}).Debug("NewDatagramSubSession called")
-	if udpPort > 65335 || udpPort < 0 {
-		log.WithField("udpPort", udpPort).Error("Invalid UDP port")
-		return nil, errors.New("udpPort needs to be in the intervall 0-65335")
+	udpSessionConfig := &common.UDPSessionConfig{
+		Port:          udpPort,
+		ParentConn:    s.conn,
+		Log:           log,
+		DefaultPort:   7655,
+		AllowZeroPort: true,
+		// Add required session parameters
+		Style:        "DATAGRAM",
+		FromPort:     "0", // Allow dynamic port assignment
+		ToPort:       "0",
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
 	}
-	if udpPort == 0 {
-		udpPort = 7655
-		log.Debug("Using default UDP port 7655")
-	}
-	lhost, _, err := SplitHostPort(s.conn.LocalAddr().String())
+	udpConn, err := common.NewUDPSession(udpSessionConfig)
 	if err != nil {
-		log.WithError(err).Error("Failed to split local host port")
-		s.Close()
+		log.WithError(err).Error("Failed to create UDP session")
 		return nil, err
 	}
-	lUDPAddr, err := net.ResolveUDPAddr("udp4", lhost+":0")
-	if err != nil {
-		log.WithError(err).Error("Failed to resolve local UDP address")
-		return nil, err
-	}
-	udpconn, err := net.ListenUDP("udp4", lUDPAddr)
-	if err != nil {
-		log.WithError(err).Error("Failed to listen on UDP")
-		return nil, err
-	}
-	rhost, _, err := SplitHostPort(s.conn.RemoteAddr().String())
-	if err != nil {
-		log.WithError(err).Error("Failed to split remote host port")
-		s.Close()
-		return nil, err
-	}
-	rUDPAddr, err := net.ResolveUDPAddr("udp4", rhost+":"+strconv.Itoa(udpPort))
-	if err != nil {
-		log.WithError(err).Error("Failed to resolve remote UDP address")
-		return nil, err
-	}
-	_, lport, err := net.SplitHostPort(udpconn.LocalAddr().String())
+	_, lport, err := net.SplitHostPort(udpConn.Conn.LocalAddr().String())
 	if err != nil {
 		log.WithError(err).Error("Failed to get local port")
 		s.Close()
@@ -419,9 +435,33 @@ func (s *PrimarySession) NewDatagramSubSession(id string, udpPort int) (*Datagra
 		log.WithError(err).Error("Failed to create new generic sub-session")
 		return nil, err
 	}
-
+	if len(datagramOptions) > 0 {
+		// return &DatagramSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr, nil, &datagramOptions[0]}, nil
+		return &DatagramSession{
+			samAddr:         s.Config.I2PConfig.Sam(),
+			id:              id,
+			conn:            conn,
+			keys:            s.keys,
+			UDPSession:      *udpConn,
+			DatagramOptions: &datagramOptions[0],
+		}, nil
+	}
+	opts := &DatagramOptions{
+		SendTags:     0,
+		TagThreshold: 0,
+		Expires:      0,
+		SendLeaseset: false,
+	}
 	log.WithFields(logrus.Fields{"id": id, "localPort": lport}).Debug("Created new datagram sub-session")
-	return &DatagramSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr, nil}, nil
+	// return &DatagramSession{s.Config.I2PConfig.Sam(), id, conn, udpconn, s.keys, rUDPAddr, nil, opts}, nil
+	return &DatagramSession{
+		samAddr:         s.Config.I2PConfig.Sam(),
+		id:              id,
+		conn:            conn,
+		keys:            s.keys,
+		UDPSession:      *udpConn,
+		DatagramOptions: opts,
+	}, nil
 }
 
 // Creates a new raw session. udpPort is the UDP port SAM is listening on,

@@ -1,4 +1,4 @@
-package sam3
+package config
 
 import logger "github.com/go-i2p/sam3/log"
 

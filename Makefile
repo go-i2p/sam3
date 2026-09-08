@@ -24,7 +24,7 @@ copier:
 	echo 'for f in $$(ls); do scp $$f/*.deb user@192.168.99.106:~/DEBIAN_PKGS/$$f/main/; done' >> deb/copy.sh
 
 fmt:
-	find . -name '*.go' -exec gofmt -w -s {} \;
+	find . -name '*.go' -exec gofumpt -w -s -extra {} \;
 
 upload-linux:
 	github-release upload -R -u $(USER_GH) -r "$(packagename)" -t $(VERSION) -l `sha256sum ` -n "$(packagename)" -f "$(packagename)"

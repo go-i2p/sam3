@@ -5,11 +5,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/sirupsen/logrus"
+	"fmt"
 	"io"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/i2pkeys"
 )
@@ -97,7 +99,7 @@ func (sam *SAM) NewStreamSession(id string, keys i2pkeys.I2PKeys, options []stri
 		return nil, err
 	}
 	log.WithField("id", id).Debug("Created new StreamSession")
-	return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, "0", "0"}, nil
+	return &StreamSession{sam.SAMEmit.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), Sig_NONE, "0", "0"}, nil
 }
 
 // Creates a new StreamSession with the I2CP- and streaminglib options as
@@ -109,7 +111,7 @@ func (sam *SAM) NewStreamSessionWithSignature(id string, keys i2pkeys.I2PKeys, o
 		return nil, err
 	}
 	log.WithFields(logrus.Fields{"id": id, "sigType": sigType}).Debug("Created new StreamSession with signature")
-	return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), sigType, "0", "0"}, nil
+	return &StreamSession{sam.SAMEmit.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), sigType, "0", "0"}, nil
 }
 
 // Creates a new StreamSession with the I2CP- and streaminglib options as
@@ -121,7 +123,7 @@ func (sam *SAM) NewStreamSessionWithSignatureAndPorts(id, from, to string, keys 
 		return nil, err
 	}
 	log.WithFields(logrus.Fields{"id": id, "from": from, "to": to, "sigType": sigType}).Debug("Created new StreamSession with signature and ports")
-	return &StreamSession{sam.Config.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), sigType, from, to}, nil
+	return &StreamSession{sam.SAMEmit.I2PConfig.Sam(), id, conn, keys, time.Duration(600 * time.Second), time.Now(), sigType, from, to}, nil
 }
 
 // lookup name, convenience function
@@ -212,7 +214,7 @@ func (s *StreamSession) Dial(n, addr string) (c net.Conn, err error) {
 	var i2paddr i2pkeys.I2PAddr
 	var host string
 	host, _, err = SplitHostPort(addr)
-	//log.Println("Dialing:", host)
+	// log.Println("Dialing:", host)
 	if err = IgnorePortError(err); err == nil {
 		// check for name
 		if strings.HasSuffix(host, ".b32.i2p") || strings.HasSuffix(host, ".i2p") {
@@ -222,8 +224,8 @@ func (s *StreamSession) Dial(n, addr string) (c net.Conn, err error) {
 		} else {
 			// probably a destination
 			i2paddr, err = i2pkeys.NewI2PAddrFromBytes([]byte(host))
-			//i2paddr = i2pkeys.I2PAddr(host)
-			//log.Println("Destination:", i2paddr, err)
+			// i2paddr = i2pkeys.I2PAddr(host)
+			// log.Println("Destination:", i2paddr, err)
 			log.WithFields(logrus.Fields{"host": host, "i2paddr": i2paddr}).Debug("Created I2P address from bytes")
 		}
 		if err == nil {
@@ -243,7 +245,12 @@ func (s *StreamSession) DialI2P(addr i2pkeys.I2PAddr) (*SAMConn, error) {
 		return nil, err
 	}
 	conn := sam.conn
-	_, err = conn.Write([]byte("STREAM CONNECT ID=" + s.id + " FROM_PORT=" + s.from + " TO_PORT=" + s.to + " DESTINATION=" + addr.Base64() + " SILENT=false\n"))
+	cmd := fmt.Sprintf("STREAM CONNECT ID=%s DESTINATION=%s FROM_PORT=%s TO_PORT=%s SILENT=false\n",
+		s.id,
+		addr.Base64(),
+		s.from,
+		s.to)
+	_, err = conn.Write([]byte(cmd))
 	if err != nil {
 		log.WithError(err).Error("Failed to write STREAM CONNECT command")
 		conn.Close()
@@ -290,7 +297,7 @@ func (s *StreamSession) DialI2P(addr i2pkeys.I2PAddr) (*SAMConn, error) {
 		default:
 			log.WithField("error", scanner.Text()).Error("Unknown error")
 			conn.Close()
-			return nil, errors.New("Unknown error: " + scanner.Text() + " : " + string(buf[:n]))
+			return nil, fmt.Errorf("Unknown error: %s : %s", scanner.Text(), string(buf[:n]))
 		}
 	}
 	log.Panic("Unexpected end of StreamSession.DialI2P()")
